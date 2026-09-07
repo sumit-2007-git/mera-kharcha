@@ -1,0 +1,73 @@
+@model MeraKharcha.ViewModels.CreateRecurringExpenseViewModel
+@{
+    ViewData["Title"] = "Add Recurring Expense";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card-modern p-4 p-md-5">
+            <h4 class="fw-bold mb-1"><i class="bi bi-arrow-repeat text-danger me-2"></i>New Recurring Bill</h4>
+            <span class="text-muted small d-block mb-4">Group: <strong>@Model.GroupName</strong></span>
+
+            <form asp-action="Create" method="post">
+                <input type="hidden" asp-for="GroupId" />
+                <input type="hidden" asp-for="GroupName" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label small fw-semibold"></label>
+                    <input asp-for="Title" class="form-control" placeholder="e.g. WiFi Fiber, Rent, Cook Salary..." required />
+                    <span asp-validation-for="Title" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Amount" class="form-label small fw-semibold">Estimated Amount (₹) *</label>
+                    <input asp-for="Amount" class="form-control fw-bold" placeholder="0.00" step="0.01" required />
+                    <span asp-validation-for="Amount" class="text-danger small"></span>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <label asp-for="PaidByUserId" class="form-label small fw-semibold">Default Payer</label>
+                        <select asp-for="PaidByUserId" class="form-select">
+                            @foreach (var m in Model.AvailableMembers)
+                            {
+                                <option value="@m.UserId">@m.FullName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="Frequency" class="form-label small fw-semibold">Billing Frequency</label>
+                        <select asp-for="Frequency" class="form-select">
+                            <option value="Monthly">Monthly</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Yearly">Yearly</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6">
+                        <label asp-for="CategoryId" class="form-label small fw-semibold">Category</label>
+                        <select asp-for="CategoryId" class="form-select">
+                            <option value="">-- Optional --</option>
+                            @foreach (var c in Model.AvailableCategories)
+                            {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="NextDueDate" class="form-label small fw-semibold">First Due Date</label>
+                        <input asp-for="NextDueDate" type="date" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                    <a asp-controller="Groups" asp-action="Details" asp-route-id="@Model.GroupId" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm">Save Recurring Bill</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,20 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="row justify-content-center text-center py-5">
+    <div class="col-md-6">
+        <div class="card-modern p-5">
+            <div class="stat-icon-wrapper bg-danger-subtle text-danger mx-auto mb-3" style="width: 70px; height: 70px; font-size: 2rem;">
+                <i class="bi bi-shield-slash"></i>
+            </div>
+            <h3 class="fw-bold text-danger">Access Denied</h3>
+            <p class="text-muted mt-2 mb-4">
+                You do not have the required permissions to view this resource. If you believe this is a mistake, please contact your group admin or system administrator.
+            </p>
+            <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary px-4 rounded-pill">
+                <i class="bi bi-house me-1"></i> Return to Dashboard
+            </a>
+        </div>
+    </div>
+</div>

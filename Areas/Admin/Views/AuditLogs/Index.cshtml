@@ -1,0 +1,53 @@
+@model IEnumerable<MeraKharcha.Models.ActivityLog>
+@{
+    ViewData["Title"] = "Security & Activity Audit Logs";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1"><i class="bi bi-journal-text text-primary me-2"></i>Security & Activity Audit Trail</h3>
+        <p class="text-muted small mb-0">Chronological history of expenses, settlement confirmations, and membership changes</p>
+    </div>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill">
+        <i class="bi bi-arrow-left me-1"></i> Admin Console
+    </a>
+</div>
+
+<div class="card-modern p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle small mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 170px;">Date & Time</th>
+                    <th>Action Event</th>
+                    <th>Group</th>
+                    <th>User</th>
+                    <th>Audit Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in Model)
+                {
+                    <tr>
+                        <td class="text-nowrap text-muted">@log.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary">@log.Action</span>
+                        </td>
+                        <td>
+                            @if (log.Group != null)
+                            {
+                                <span class="fw-semibold">@log.Group.Name</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Global</span>
+                            }
+                        </td>
+                        <td>@(log.User?.FullName ?? "System")</td>
+                        <td>@log.Description</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

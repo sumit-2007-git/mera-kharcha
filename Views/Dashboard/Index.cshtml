@@ -1,0 +1,365 @@
+@model MeraKharcha.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Financial Dashboard";
+}
+
+<!-- Welcome & Quick Actions -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Hello, @Model.UserName 👋</h3>
+        <p class="text-muted small mb-0">Here is your financial summary across all active groups today.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Groups" asp-action="Create" class="btn btn-primary rounded-3 px-3 shadow-sm">
+            <i class="bi bi-plus-lg me-1"></i> Create Group
+        </a>
+        <a asp-controller="Groups" asp-action="Join" class="btn btn-outline-secondary rounded-3 px-3">
+            <i class="bi bi-qr-code me-1"></i> Join Group
+        </a>
+    </div>
+</div>
+
+<!-- 6 KPI Metric Cards -->
+<div class="row g-3 mb-4">
+    <!-- You Paid -->
+    <div class="col-6 col-lg-2">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-semibold">You Paid</span>
+                <div class="stat-icon-wrapper bg-primary-subtle text-primary" style="width: 32px; height: 32px; font-size: 1rem;">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-0 text-primary">₹@Model.TotalExpensesPaid.ToString("N0")</h4>
+            <small class="text-muted" style="font-size: 0.75rem;">Total spent by you</small>
+        </div>
+    </div>
+
+    <!-- Your Share -->
+    <div class="col-6 col-lg-2">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-semibold">Your Share</span>
+                <div class="stat-icon-wrapper bg-info-subtle text-info" style="width: 32px; height: 32px; font-size: 1rem;">
+                    <i class="bi bi-pie-chart"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-0">₹@Model.TotalExpenseShare.ToString("N0")</h4>
+            <small class="text-muted" style="font-size: 0.75rem;">Responsible for</small>
+        </div>
+    </div>
+
+    <!-- You Owe -->
+    <div class="col-6 col-lg-2">
+        <div class="stat-card h-100 border-danger border-opacity-25">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-semibold">You Owe</span>
+                <div class="stat-icon-wrapper bg-danger-subtle text-danger" style="width: 32px; height: 32px; font-size: 1rem;">
+                    <i class="bi bi-arrow-up-right"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-0 text-danger">₹@Model.YouOwe.ToString("N0")</h4>
+            <small class="text-danger" style="font-size: 0.75rem;">To settle up</small>
+        </div>
+    </div>
+
+    <!-- You Receive -->
+    <div class="col-6 col-lg-2">
+        <div class="stat-card h-100 border-success border-opacity-25">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-semibold">You Receive</span>
+                <div class="stat-icon-wrapper bg-success-subtle text-success" style="width: 32px; height: 32px; font-size: 1rem;">
+                    <i class="bi bi-arrow-down-left"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-0 text-success">₹@Model.YouReceive.ToString("N0")</h4>
+            <small class="text-success" style="font-size: 0.75rem;">Others owe you</small>
+        </div>
+    </div>
+
+    <!-- Active Groups -->
+    <div class="col-6 col-lg-2">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-semibold">Active Groups</span>
+                <div class="stat-icon-wrapper bg-secondary-subtle text-secondary" style="width: 32px; height: 32px; font-size: 1rem;">
+                    <i class="bi bi-people"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-0">@Model.ActiveGroupsCount</h4>
+            <small class="text-muted" style="font-size: 0.75rem;">Workspaces joined</small>
+        </div>
+    </div>
+
+    <!-- Pending Settlements -->
+    <div class="col-6 col-lg-2">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-muted small fw-semibold">Pending Settlements</span>
+                <div class="stat-icon-wrapper bg-warning-subtle text-warning" style="width: 32px; height: 32px; font-size: 1rem;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-0 @(Model.PendingSettlementsCount > 0 ? "text-warning" : "")">@Model.PendingSettlementsCount</h4>
+            <small class="text-muted" style="font-size: 0.75rem;">Awaiting confirmation</small>
+        </div>
+    </div>
+</div>
+
+<!-- Prominent Settlement Optimizer Banner -->
+<div class="optimizer-banner mb-4 shadow-sm">
+    <div class="row align-items-center position-relative" style="z-index: 2;">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-light text-primary fw-bold px-2 py-1">AI Powered Algorithm</span>
+                <span class="small opacity-75">Minimum Cash Flow Reducer</span>
+            </div>
+            <h4 class="fw-extrabold mb-1">Settlement Optimizer is Ready</h4>
+            <p class="mb-0 opacity-90 small">
+                Eliminate complex circular transfers! Our greedy optimizer groups debtors and creditors to settle all shared debts with the minimum number of transactions possible.
+            </p>
+        </div>
+        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+            @if (Model.Groups.Any())
+            {
+                <a asp-controller="Groups" asp-action="Details" asp-route-id="@Model.Groups.First().Id" asp-route-tab="settlements" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-pill shadow-sm">
+                    <i class="bi bi-magic me-1"></i> Optimize Settlements
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Groups" asp-action="Create" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-pill shadow-sm">
+                    <i class="bi bi-plus-circle me-1"></i> Create First Group
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-4 mb-4">
+    <!-- Monthly Spending Trend Line Chart -->
+    <div class="col-lg-8">
+        <div class="card-modern p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-0">Monthly Expense Trend</h5>
+                    <small class="text-muted">Total group expenditure over the last 6 months</small>
+                </div>
+                <span class="badge bg-primary-subtle text-primary"><i class="bi bi-graph-up me-1"></i>Monthly View</span>
+            </div>
+            <div style="position: relative; height: 260px;">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown Doughnut Chart -->
+    <div class="col-lg-4">
+        <div class="card-modern p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-0">Category Breakdown</h5>
+                    <small class="text-muted">Where your money goes</small>
+                </div>
+                <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-pie-chart me-1"></i>Distribution</span>
+            </div>
+            <div style="position: relative; height: 260px;">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Groups & Recent Activity -->
+<div class="row g-4">
+    <!-- Active Groups -->
+    <div class="col-lg-7">
+        <div class="card-modern p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-people-fill text-primary me-2"></i>My Active Groups</h5>
+                <a asp-controller="Groups" asp-action="Index" class="btn btn-sm btn-link text-decoration-none fw-semibold">
+                    View All <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            @if (Model.Groups.Any())
+            {
+                <div class="vstack gap-3">
+                    @foreach (var g in Model.Groups)
+                    {
+                        <div class="p-3 border rounded-3 bg-body-tertiary d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon-wrapper bg-primary text-white" style="width: 44px; height: 44px; font-size: 1.2rem;">
+                                    <i class="bi @(string.IsNullOrEmpty(g.ImageUrl) ? "bi-people" : g.ImageUrl)"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">@g.Name</h6>
+                                    <div class="d-flex align-items-center gap-2 small text-muted">
+                                        <span><i class="bi bi-people me-1"></i>@g.MemberCount members</span>
+                                        <span>&bull;</span>
+                                        <span>Total: ₹@g.TotalSpending.ToString("N0")</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 justify-content-between">
+                                <div class="text-sm-end">
+                                    <span class="d-block small text-muted">Your Status</span>
+                                    @if (g.UserNetBalance > 0.01m)
+                                    {
+                                        <span class="badge-glow-success">+₹@g.UserNetBalance.ToString("N2")</span>
+                                    }
+                                    else if (g.UserNetBalance < -0.01m)
+                                    {
+                                        <span class="badge-glow-danger">-₹@Math.Abs(g.UserNetBalance).ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary">Settled Up</span>
+                                    }
+                                </div>
+                                <a asp-controller="Groups" asp-action="Details" asp-route-id="@g.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                    Open
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-people fs-1 d-block mb-2"></i>
+                    <p>You haven't joined any groups yet.</p>
+                    <a asp-controller="Groups" asp-action="Create" class="btn btn-primary btn-sm rounded-pill">Create a Group</a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Recent Activity Feed -->
+    <div class="col-lg-5">
+        <div class="card-modern p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-activity text-info me-2"></i>Recent Activity</h5>
+                <span class="badge bg-body-secondary text-muted">Live Feed</span>
+            </div>
+
+            @if (Model.RecentActivities.Any())
+            {
+                <div class="timeline vstack gap-3">
+                    @foreach (var act in Model.RecentActivities)
+                    {
+                        <div class="d-flex align-items-start gap-2 border-bottom border-light pb-2">
+                            <div class="stat-icon-wrapper bg-light text-primary rounded-circle" style="width: 32px; height: 32px; font-size: 0.9rem; flex-shrink: 0;">
+                                @if (act.Action.Contains("Expense"))
+                                {
+                                    <i class="bi bi-receipt"></i>
+                                }
+                                else if (act.Action.Contains("Settlement"))
+                                {
+                                    <i class="bi bi-check2-circle text-success"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-person-plus text-info"></i>
+                                }
+                            </div>
+                            <div class="overflow-hidden flex-grow-1">
+                                <div class="small fw-semibold text-wrap">@act.Description</div>
+                                <div class="d-flex gap-2 small text-muted" style="font-size: 0.75rem;">
+                                    <span>@act.CreatedAt.ToString("MMM dd, HH:mm")</span>
+                                    @if (act.Group != null)
+                                    {
+                                        <span>&bull;</span>
+                                        <span class="text-truncate">@act.Group.Name</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted small">
+                    No recent activity recorded.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Monthly Trend Chart
+            const monthlyLabels = @Html.Raw(Model.MonthlySpendingLabelsJson);
+            const monthlyData = @Html.Raw(Model.MonthlySpendingDataJson);
+
+            const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+            new Chart(monthlyCtx, {
+                type: 'line',
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [{
+                        label: 'Total Expenses (₹)',
+                        data: monthlyData,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#4f46e5',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function (value) { return '₹' + value; }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Category Breakdown Chart
+            const catLabels = @Html.Raw(Model.CategoryLabelsJson);
+            const catData = @Html.Raw(Model.CategoryDataJson);
+            const catColors = @Html.Raw(Model.CategoryColorsJson);
+
+            const catCtx = document.getElementById('categoryChart').getContext('2d');
+            new Chart(catCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: catLabels,
+                    datasets: [{
+                        data: catData,
+                        backgroundColor: catColors,
+                        borderWidth: 2,
+                        borderColor: 'transparent'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { size: 11 } }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        });
+    </script>
+}

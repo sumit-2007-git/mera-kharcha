@@ -1,0 +1,69 @@
+@model MeraKharcha.Services.GroupFinancialSummaryDto
+@{
+    ViewData["Title"] = "Settlement Optimizer - " + Model.GroupName;
+    var group = ViewBag.Group as MeraKharcha.Models.Group;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Banner -->
+        <div class="optimizer-banner p-4 p-md-5 mb-4 shadow">
+            <span class="badge bg-light text-primary fw-bold px-3 py-1 mb-3">Minimum Cash Flow Graph Engine</span>
+            <h2 class="fw-extrabold mb-2">Settlement Plan Optimization</h2>
+            <p class="lead opacity-90 mb-4">
+                Reducing <strong>@Model.OptimizationResult.BeforeTransactionCount</strong> chaotic peer debts down to just <strong>@Model.OptimizationResult.AfterTransactionCount</strong> direct transfers!
+            </p>
+
+            <div class="d-flex flex-wrap gap-4 pt-3 border-top border-white border-opacity-25">
+                <div>
+                    <span class="small opacity-75 d-block">Total Settlement Volume</span>
+                    <h3 class="fw-bold mb-0">₹@Model.OptimizationResult.TotalAmountSettled.ToString("N2")</h3>
+                </div>
+                <div>
+                    <span class="small opacity-75 d-block">Transaction Reduction</span>
+                    <h3 class="fw-bold text-warning mb-0">
+                        @((Model.OptimizationResult.BeforeTransactionCount > 0) 
+                            ? $"{(100 - (Model.OptimizationResult.AfterTransactionCount * 100 / Model.OptimizationResult.BeforeTransactionCount))}% Fewer Transfers" 
+                            : "Optimal")
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optimized Transactions -->
+        <div class="card-modern p-4 mb-4">
+            <h4 class="fw-bold mb-3"><i class="bi bi-diagram-3-fill text-primary me-2"></i>Optimized Settlement Steps</h4>
+            <div class="vstack gap-3">
+                @foreach (var t in Model.OptimizationResult.Transactions)
+                {
+                    <div class="p-4 border rounded-4 bg-body-tertiary d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper bg-primary text-white rounded-circle shadow-sm" style="width: 50px; height: 50px;">
+                                <i class="bi bi-arrow-right-short fs-2"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-1">
+                                    <span class="text-danger">@t.PayerName</span> sends to <span class="text-success">@t.ReceiverName</span>
+                                </h5>
+                                <span class="text-muted small">Step in minimal transaction settlement chain</span>
+                            </div>
+                        </div>
+
+                        <div class="text-md-end">
+                            <h3 class="fw-extrabold text-primary mb-0">₹@t.Amount.ToString("N2")</h3>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-4 mt-4 border-top">
+                <a asp-controller="Groups" asp-action="Details" asp-route-id="@Model.GroupId" asp-route-tab="settlements" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Group Workspace
+                </a>
+                <a asp-controller="Reports" asp-action="ExportSettlementsCsv" asp-route-groupId="@Model.GroupId" class="btn btn-primary px-4 shadow-sm">
+                    <i class="bi bi-download me-1"></i> Export Plan CSV
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

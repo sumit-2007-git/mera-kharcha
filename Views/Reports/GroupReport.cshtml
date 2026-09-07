@@ -1,0 +1,167 @@
+@model MeraKharcha.Models.Group
+@{
+    ViewData["Title"] = "Group Expense Audit Report - " + Model.Name;
+    var summary = ViewBag.Summary as MeraKharcha.Services.GroupFinancialSummaryDto;
+    var genAt = (DateTime)ViewBag.GeneratedAt;
+}
+
+<div class="container-fluid px-0">
+    <!-- Action Bar (hidden when printing) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <a asp-controller="Groups" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Workspace
+        </a>
+        <div class="d-flex gap-2">
+            <a asp-action="GroupReport" asp-route-groupId="@Model.Id" asp-route-format="csv" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Download CSV
+            </a>
+            <button type="button" class="btn btn-primary shadow-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Print / Save as PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Printable Report Card -->
+    <div class="card-modern p-4 p-md-5">
+        <!-- Invoice/Audit Header -->
+        <div class="d-flex justify-content-between align-items-start pb-4 border-bottom mb-4">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <div class="stat-icon-wrapper bg-primary text-white" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <h3 class="fw-extrabold mb-0">Mera Kharcha</h3>
+                </div>
+                <div class="text-muted small">Smart Expense Splitting & Debt Settlement Audit Report</div>
+                <div class="mt-2">
+                    <span class="badge bg-secondary-subtle text-secondary">Group ID: #@Model.Id</span>
+                    <span class="badge bg-primary-subtle text-primary ms-1">Invite Code: @Model.InviteCode</span>
+                </div>
+            </div>
+            <div class="text-end">
+                <h4 class="fw-bold mb-1">@Model.Name</h4>
+                <small class="text-muted d-block">Generated: @genAt.ToString("MMMM dd, yyyy HH:mm")</small>
+                <small class="text-muted d-block">Created By: @(Model.CreatedBy?.FullName ?? "Member")</small>
+            </div>
+        </div>
+
+        <!-- Executive Financial Summary -->
+        <div class="row g-3 mb-4 p-3 bg-body-tertiary rounded-3 border">
+            <div class="col-sm-4 text-center border-end">
+                <span class="small text-muted d-block text-uppercase">Total Group Expenditure</span>
+                <h3 class="fw-bold text-primary mb-0">₹@Model.Expenses.Sum(e => e.Amount).ToString("N2")</h3>
+            </div>
+            <div class="col-sm-4 text-center border-end">
+                <span class="small text-muted d-block text-uppercase">Total Expenses Logged</span>
+                <h3 class="fw-bold mb-0">@Model.Expenses.Count</h3>
+            </div>
+            <div class="col-sm-4 text-center">
+                <span class="small text-muted d-block text-uppercase">Active Members</span>
+                <h3 class="fw-bold mb-0">@Model.Members.Count</h3>
+            </div>
+        </div>
+
+        <!-- Member Balances Ledger -->
+        <h5 class="fw-bold mb-3">1. Member Financial Net Balances</h5>
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Member Name</th>
+                        <th>Email</th>
+                        <th class="text-end">Total Amount Paid</th>
+                        <th class="text-end">Total Share Owed</th>
+                        <th class="text-end">Net Position</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (summary != null)
+                    {
+                        foreach (var b in summary.MemberBalances)
+                        {
+                            var memUser = Model.Members.FirstOrDefault(m => m.UserId == b.UserId)?.User;
+                            <tr>
+                                <td class="fw-semibold">@b.UserName</td>
+                                <td class="small text-muted">@(memUser?.Email ?? "-")</td>
+                                <td class="text-end">₹@b.TotalPaid.ToString("N2")</td>
+                                <td class="text-end">₹@b.TotalShare.ToString("N2")</td>
+                                <td class="text-end fw-bold @(b.NetBalance > 0 ? "text-success" : b.NetBalance < 0 ? "text-danger" : "")">
+                                    @(b.NetBalance > 0 ? "+" : "")₹@b.NetBalance.ToString("N2")
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Minimal Settlement Optimization Engine Result -->
+        @if (summary?.OptimizationResult?.Transactions.Any() == true)
+        {
+            <h5 class="fw-bold mb-3">2. Optimized Minimum-Transaction Settlement Plan</h5>
+            <div class="p-3 bg-body-tertiary rounded-3 border mb-4">
+                <p class="small text-muted mb-3">
+                    Algorithmic reduction: <strong>@summary.OptimizationResult.BeforeTransactionCount</strong> bilateral transfers optimized to <strong>@summary.OptimizationResult.AfterTransactionCount</strong> direct payments.
+                </p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Debtor (Payer)</th>
+                                <th>Creditor (Receiver)</th>
+                                <th class="text-end">Transfer Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int stepIdx = 1; }
+                            @foreach (var t in summary.OptimizationResult.Transactions)
+                            {
+                                <tr>
+                                    <td>@(stepIdx++)</td>
+                                    <td class="text-danger fw-semibold">@t.PayerName</td>
+                                    <td class="text-success fw-semibold">@t.ReceiverName</td>
+                                    <td class="text-end fw-bold text-primary">₹@t.Amount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <!-- Itemized Expenses Table -->
+        <h5 class="fw-bold mb-3">3. Itemized Group Expense Log</h5>
+        <div class="table-responsive mb-4">
+            <table class="table table-striped table-bordered align-middle small mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Paid By</th>
+                        <th>Split Type</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var exp in Model.Expenses.OrderByDescending(e => e.ExpenseDate))
+                    {
+                        <tr>
+                            <td>@exp.ExpenseDate.ToString("yyyy-MM-dd")</td>
+                            <td class="fw-semibold">@exp.Title</td>
+                            <td>@(exp.Category?.Name ?? "General")</td>
+                            <td>@(exp.PaidByUser?.FullName ?? "Unknown")</td>
+                            <td>@exp.SplitType</td>
+                            <td class="text-end fw-bold">₹@exp.Amount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pt-4 border-top text-center text-muted small">
+            Generated by <strong>Mera Kharcha</strong> | Minimum-Transaction Settlement Optimizer Platform
+        </div>
+    </div>
+</div>

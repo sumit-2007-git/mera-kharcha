@@ -1,0 +1,97 @@
+@model IEnumerable<MeraKharcha.ViewModels.GroupCardViewModel>
+@{
+    ViewData["Title"] = "My Groups";
+}
+
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">My Expense Groups</h3>
+        <p class="text-muted small mb-0">Collaborate on trips, flat shares, events, and family expenses</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Join" class="btn btn-outline-secondary rounded-3 px-3">
+            <i class="bi bi-qr-code me-1"></i> Join Group
+        </a>
+        <a asp-action="Create" class="btn btn-primary rounded-3 px-3 shadow-sm">
+            <i class="bi bi-plus-lg me-1"></i> Create Group
+        </a>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="row g-4">
+        @foreach (var g in Model)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card-modern h-100 p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="stat-icon-wrapper bg-primary text-white shadow-sm" style="width: 48px; height: 48px; font-size: 1.3rem;">
+                                <i class="bi @(string.IsNullOrEmpty(g.ImageUrl) ? "bi-people" : g.ImageUrl)"></i>
+                            </div>
+                            <span class="badge bg-secondary-subtle text-secondary small">
+                                <i class="bi bi-shield-check me-1"></i>@g.UserRole
+                            </span>
+                        </div>
+
+                        <h5 class="fw-bold mb-1 text-truncate">@g.Name</h5>
+                        <p class="text-muted small mb-3 text-truncate-2" style="min-height: 2.4rem;">
+                            @(string.IsNullOrEmpty(g.Description) ? "Shared collaborative workspace for group expenses." : g.Description)
+                        </p>
+
+                        <div class="p-3 bg-body-tertiary rounded-3 mb-3 border border-light">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small text-muted"><i class="bi bi-people me-1"></i>Members</span>
+                                <span class="fw-bold small">@g.MemberCount people</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small text-muted"><i class="bi bi-cash-stack me-1"></i>Total Spent</span>
+                                <span class="fw-bold small">₹@g.TotalSpending.ToString("N2")</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top border-light">
+                                <span class="small text-muted">Your Net Balance</span>
+                                @if (g.UserNetBalance > 0.01m)
+                                {
+                                    <span class="badge-glow-success">+₹@g.UserNetBalance.ToString("N2")</span>
+                                }
+                                else if (g.UserNetBalance < -0.01m)
+                                {
+                                    <span class="badge-glow-danger">-₹@Math.Abs(g.UserNetBalance).ToString("N2")</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary">Settled Up</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <a asp-action="Details" asp-route-id="@g.Id" class="btn btn-outline-primary w-100 rounded-3 fw-semibold">
+                        Enter Workspace <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card-modern text-center py-5 px-3">
+        <div class="stat-icon-wrapper bg-primary-subtle text-primary mx-auto mb-3" style="width: 64px; height: 64px; font-size: 2rem;">
+            <i class="bi bi-people"></i>
+        </div>
+        <h4 class="fw-bold">No Groups Yet</h4>
+        <p class="text-muted small mx-auto mb-4" style="max-width: 420px;">
+            Create your first group for a vacation, flatmates, or an outing, or join an existing group with an invite code.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+            <a asp-action="Create" class="btn btn-primary px-4 rounded-pill shadow-sm">
+                <i class="bi bi-plus-lg me-1"></i> Create Group
+            </a>
+            <a asp-action="Join" class="btn btn-outline-secondary px-4 rounded-pill">
+                <i class="bi bi-qr-code me-1"></i> Join Group
+            </a>
+        </div>
+    </div>
+}

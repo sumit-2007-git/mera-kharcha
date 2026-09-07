@@ -1,0 +1,72 @@
+@model MeraKharcha.ViewModels.ProfileViewModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        <div class="card-modern p-4 p-md-5">
+            <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                {
+                    <img src="@Model.AvatarUrl" class="rounded-circle object-fit-cover shadow" style="width: 72px; height: 72px;" alt="Avatar" />
+                }
+                else
+                {
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-3 shadow" style="width: 72px; height: 72px;">
+                        @(Model.FullName.Substring(0, 1).ToUpper())
+                    </div>
+                }
+                <div>
+                    <h4 class="fw-bold mb-1">@Model.FullName</h4>
+                    <span class="text-muted small">Member since @Model.CreatedAt.ToString("MMMM yyyy")</span>
+                </div>
+            </div>
+
+            <form asp-action="Profile" method="post">
+                <input type="hidden" asp-for="Id" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger small" role="alert"></div>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label asp-for="FullName" class="form-label small fw-semibold">Full Name</label>
+                        <input asp-for="FullName" class="form-control" />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <label asp-for="Email" class="form-label small fw-semibold">Email (Read Only)</label>
+                        <input asp-for="Email" class="form-control" readonly disabled />
+                    </div>
+
+                    <div class="col-sm-6">
+                        <label asp-for="PhoneNumber" class="form-label small fw-semibold">Phone Number</label>
+                        <input asp-for="PhoneNumber" class="form-control" placeholder="+91 98765 43210" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <label asp-for="UpiId" class="form-label small fw-semibold">UPI ID for Settlements</label>
+                        <input asp-for="UpiId" class="form-control" placeholder="yourname@upi" />
+                        <span asp-validation-for="UpiId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="AvatarUrl" class="form-label small fw-semibold">Profile Picture URL</label>
+                        <input asp-for="AvatarUrl" class="form-control" placeholder="https://..." />
+                        <span asp-validation-for="AvatarUrl" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                    <a asp-action="ChangePassword" class="btn btn-outline-secondary">
+                        <i class="bi bi-key me-1"></i> Change Password
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                        <i class="bi bi-check2 me-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,71 @@
+@model IEnumerable<MeraKharcha.Models.RecurringExpense>
+@{
+    ViewData["Title"] = "Recurring Expenses & Bills";
+}
+
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Recurring Bills & Subscriptions</h3>
+        <p class="text-muted small mb-0">Manage rent, wifi, electricity, and recurring shared group payments</p>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="row g-4">
+        @foreach (var rec in Model)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card-modern p-4 h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <span class="badge bg-primary-subtle text-primary">@rec.Frequency</span>
+                            <span class="badge @(rec.NextDueDate <= DateTime.Today.AddDays(3) ? "bg-danger-subtle text-danger" : "bg-success-subtle text-success")">
+                                Next Due: @rec.NextDueDate.ToString("MMM dd, yyyy")
+                            </span>
+                        </div>
+
+                        <h5 class="fw-bold mb-1 text-truncate">@rec.Title</h5>
+                        <small class="text-muted d-block mb-3">Group: <strong>@rec.Group.Name</strong></small>
+
+                        <div class="p-3 bg-body-tertiary rounded-3 mb-3 border border-light">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small text-muted">Amount</span>
+                                <span class="fw-bold text-primary">₹@rec.Amount.ToString("N2")</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small text-muted">Payer</span>
+                                <span class="small fw-semibold">@rec.PaidByUser.FullName</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Split Type</span>
+                                <span class="badge bg-body-secondary text-secondary">@rec.SplitType</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form asp-action="GenerateExpenseNow" asp-route-id="@rec.Id" method="post">
+                        <button type="submit" class="btn btn-outline-primary w-100 rounded-3 fw-semibold">
+                            <i class="bi bi-calendar-check me-1"></i> Post Expense for Due Bill
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card-modern text-center py-5">
+        <div class="stat-icon-wrapper bg-danger-subtle text-danger mx-auto mb-3" style="width: 64px; height: 64px; font-size: 2rem;">
+            <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <h4 class="fw-bold">No Recurring Bills Set Up</h4>
+        <p class="text-muted small mx-auto mb-4" style="max-width: 400px;">
+            Set up automatic reminders for monthly flat rent, internet bills, electricity or streaming subscriptions.
+        </p>
+        <a asp-controller="Groups" asp-action="Index" class="btn btn-primary px-4 rounded-pill">
+            Open a Group to Add Recurring Bill
+        </a>
+    </div>
+}

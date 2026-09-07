@@ -1,0 +1,210 @@
+@model MeraKharcha.ViewModels.AddExpenseViewModel
+@{
+    ViewData["Title"] = "Add Expense to " + Model.GroupName;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9 col-xl-8">
+        <div class="card-modern p-4 p-md-5 shadow-lg">
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <div>
+                    <h4 class="fw-bold mb-1"><i class="bi bi-receipt-cutoff text-primary me-2"></i>Add Expense</h4>
+                    <span class="text-muted small">Group: <strong>@Model.GroupName</strong></span>
+                </div>
+                <div class="text-end">
+                    <span class="small text-muted d-block">Final Expense Total</span>
+                    <h3 class="fw-bold text-primary mb-0" id="finalTotalDisplay">₹0.00</h3>
+                </div>
+            </div>
+
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                <input type="hidden" asp-for="GroupId" />
+                <input type="hidden" asp-for="GroupName" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger small" role="alert"></div>
+
+                <!-- Basic Expense Information -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-7">
+                        <label asp-for="Title" class="form-label small fw-semibold">Expense Title *</label>
+                        <input asp-for="Title" class="form-control form-control-lg" placeholder="e.g. Seafood Dinner, Beach Villa, Groceries..." required />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label asp-for="BaseAmount" class="form-label small fw-semibold">Base Amount (₹) *</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-body-tertiary fw-bold">₹</span>
+                            <input asp-for="BaseAmount" class="form-control fw-bold" placeholder="0.00" step="0.01" required />
+                        </div>
+                        <span asp-validation-for="BaseAmount" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="PaidByUserId" class="form-label small fw-semibold">Paid By *</label>
+                        <select asp-for="PaidByUserId" class="form-select">
+                            @foreach (var m in Model.AvailableMembers)
+                            {
+                                <option value="@m.UserId">@m.FullName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="CategoryId" class="form-label small fw-semibold">Category</label>
+                        <select asp-for="CategoryId" class="form-select">
+                            <option value="">-- Choose Category --</option>
+                            @foreach (var c in Model.AvailableCategories)
+                            {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="ExpenseDate" class="form-label small fw-semibold">Expense Date</label>
+                        <input asp-for="ExpenseDate" type="date" class="form-control" />
+                    </div>
+                </div>
+
+                <!-- Extra Financial Adjustments (Tax, Tip, Service Charge, Discount) -->
+                <div class="accordion mb-4" id="extraChargesAccordion">
+                    <div class="accordion-item rounded-3 border">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed py-2 small fw-semibold text-muted bg-body-tertiary" type="button" data-bs-toggle="collapse" data-bs-target="#extraChargesCollapse">
+                                <i class="bi bi-sliders2 me-2"></i> Additional Adjustments (Tax, Tip, Service Charge, Discount)
+                            </button>
+                        </h2>
+                        <div id="extraChargesCollapse" class="accordion-collapse collapse">
+                            <div class="accordion-body p-3">
+                                <div class="row g-3">
+                                    <div class="col-6 col-md-3">
+                                        <label asp-for="TaxAmount" class="form-label small fw-semibold">Tax (₹)</label>
+                                        <input asp-for="TaxAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label asp-for="TipAmount" class="form-label small fw-semibold">Tip (₹)</label>
+                                        <input asp-for="TipAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label asp-for="ServiceCharge" class="form-label small fw-semibold">Service (₹)</label>
+                                        <input asp-for="ServiceCharge" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label asp-for="DiscountAmount" class="form-label small fw-semibold text-danger">Discount - (₹)</label>
+                                        <input asp-for="DiscountAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Receipt Upload & Assisted OCR Simulation -->
+                <div class="p-3 bg-body-tertiary rounded-3 border border-light mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label asp-for="ReceiptFile" class="form-label small fw-semibold mb-0">
+                            <i class="bi bi-paperclip me-1"></i> Attach Receipt Bill (Image / PDF)
+                        </label>
+                        <button type="button" id="scanReceiptBtn" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                            <i class="bi bi-magic me-1"></i> Simulate Receipt OCR
+                        </button>
+                    </div>
+                    <input asp-for="ReceiptFile" type="file" class="form-control form-control-sm" accept="image/*,application/pdf" />
+                    <small class="text-muted" style="font-size: 0.75rem;">Supported: JPG, PNG, WEBP, PDF (Max 5MB). Click "Simulate Receipt OCR" to test auto-filling extracted bill info!</small>
+                </div>
+
+                <!-- Split Method Selector -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label asp-for="SplitType" class="form-label small fw-bold text-uppercase mb-0">Choose Split Method</label>
+                        <span id="splitValidationBadge" class="badge bg-success-subtle text-success">Evenly split</span>
+                    </div>
+                    <select asp-for="SplitType" class="form-select fw-semibold" id="splitTypeSelect">
+                        <option value="1">Equal Split (= Evenly among selected)</option>
+                        <option value="2">Exact Amounts (₹ Specify exact sum for each)</option>
+                        <option value="3">By Percentage (% Totaling 100%)</option>
+                        <option value="4">By Shares / Ratios (1x, 2x etc.)</option>
+                    </select>
+                </div>
+
+                <!-- Participants Split Table -->
+                <div class="card-modern p-3 mb-4 bg-body-tertiary border">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small fw-semibold text-muted">Select participants included in this expense:</span>
+                        <button type="button" id="selectAllParticipants" class="btn btn-link btn-sm p-0 text-decoration-none">
+                            Select All
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr class="text-muted small">
+                                    <th style="width: 40px;">Include</th>
+                                    <th>Participant</th>
+                                    <th class="split-col-exact d-none" style="width: 140px;">Exact (₹)</th>
+                                    <th class="split-col-percentage d-none" style="width: 120px;">Percentage (%)</th>
+                                    <th class="split-col-shares d-none" style="width: 110px;">Shares Count</th>
+                                    <th class="text-end" style="width: 120px;">Calculated Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.AvailableMembers.Count; i++)
+                                {
+                                    var member = Model.AvailableMembers[i];
+                                    <tr class="participant-split-row">
+                                        <td>
+                                            <input type="hidden" name="Participants[@i].UserId" value="@member.UserId" />
+                                            <input type="checkbox" name="Participants[@i].IsIncluded" value="true" checked class="form-check-input participant-checkbox" />
+                                        </td>
+                                        <td class="fw-semibold small">
+                                            @member.FullName
+                                        </td>
+                                        <td class="split-col-exact d-none">
+                                            <input type="number" step="0.01" name="Participants[@i].ExactAmount" class="form-control form-control-sm exact-amount-input" placeholder="0.00" />
+                                        </td>
+                                        <td class="split-col-percentage d-none">
+                                            <input type="number" step="0.1" name="Participants[@i].Percentage" class="form-control form-control-sm percentage-input" placeholder="%" />
+                                        </td>
+                                        <td class="split-col-shares d-none">
+                                            <input type="number" step="1" min="1" value="1" name="Participants[@i].SharesCount" class="form-control form-control-sm shares-input" />
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="fw-bold calculated-share-badge text-primary small">₹0.00</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Notes & Tags -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="Notes" class="form-label small fw-semibold">Notes / Remarks</label>
+                        <textarea asp-for="Notes" class="form-control form-control-sm" rows="2" placeholder="Any specific details..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Tags" class="form-label small fw-semibold">Tags (comma-separated)</label>
+                        <input asp-for="Tags" class="form-control form-control-sm" placeholder="e.g. dinner, veg, cab" />
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                    <a asp-controller="Groups" asp-action="Details" asp-route-id="@Model.GroupId" asp-route-tab="expenses" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 py-2 rounded-3 fw-semibold shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Save Expense
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/expense-calc.js" asp-append-version="true"></script>
+}

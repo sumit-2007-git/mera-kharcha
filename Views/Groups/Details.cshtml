@@ -1,0 +1,886 @@
+@model MeraKharcha.ViewModels.GroupDetailsViewModel
+@{
+    ViewData["Title"] = Model.Group.Name;
+    ViewBag.GroupId = Model.Group.Id;
+    var currentUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/Groups/JoinCode?code={Model.Group.InviteCode}";
+}
+
+<!-- Group Header Banner -->
+<div class="card-modern p-4 mb-4" style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(124, 58, 237, 0.08) 100%);">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="stat-icon-wrapper bg-primary text-white shadow-sm" style="width: 56px; height: 56px; font-size: 1.6rem;">
+                <i class="bi @(string.IsNullOrEmpty(Model.Group.ImageUrl) ? "bi-people" : Model.Group.ImageUrl)"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h3 class="fw-bold mb-0">@Model.Group.Name</h3>
+                    @if (Model.Group.IsArchived)
+                    {
+                        <span class="badge bg-secondary">Archived</span>
+                    }
+                </div>
+                <p class="text-muted small mb-0">@(string.IsNullOrEmpty(Model.Group.Description) ? "Shared expenses workspace" : Model.Group.Description)</p>
+            </div>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <!-- Invite Code Badge with Copy -->
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 d-flex align-items-center gap-2" data-copy="@Model.Group.InviteCode" title="Click to copy code">
+                <i class="bi bi-key"></i>
+                <span>Code: <strong>@Model.Group.InviteCode</strong></span>
+                <i class="bi bi-clipboard text-muted"></i>
+            </button>
+
+            <!-- QR Code Button -->
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#qrModal">
+                <i class="bi bi-qr-code me-1"></i> QR Join
+            </button>
+
+            <!-- Add Expense Button -->
+            <a asp-controller="Expenses" asp-action="Create" asp-route-groupId="@Model.Group.Id" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                <i class="bi bi-plus-lg me-1"></i> Add Expense
+            </a>
+
+            <!-- Reports Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                    <li><a class="dropdown-item" asp-controller="Reports" asp-action="GroupReport" asp-route-groupId="@Model.Group.Id" asp-route-format="view"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Printable Report (PDF)</a></li>
+                    <li><a class="dropdown-item" asp-controller="Reports" asp-action="GroupReport" asp-route-groupId="@Model.Group.Id" asp-route-format="csv"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>Expenses CSV</a></li>
+                    <li><a class="dropdown-item" asp-controller="Reports" asp-action="ExportSettlementsCsv" asp-route-groupId="@Model.Group.Id"><i class="bi bi-file-earmark-text me-2 text-info"></i>Settlements CSV</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Financial Summary Strip -->
+    <div class="row g-3 pt-3 mt-2 border-top border-light">
+        <div class="col-6 col-md-3">
+            <span class="text-muted small d-block">Total Group Spend</span>
+            <span class="fw-bold fs-5">₹@Model.Expenses.Sum(e => e.Amount).ToString("N2")</span>
+        </div>
+        <div class="col-6 col-md-3">
+            <span class="text-muted small d-block">Total Expenses</span>
+            <span class="fw-bold fs-5">@Model.Expenses.Count records</span>
+        </div>
+        <div class="col-6 col-md-3">
+            <span class="text-muted small d-block">Members</span>
+            <span class="fw-bold fs-5">@Model.Members.Count people</span>
+        </div>
+        <div class="col-6 col-md-3">
+            <span class="text-muted small d-block">Your Net Balance</span>
+            @if (Model.CurrentUserNetBalance > 0.01m)
+            {
+                <span class="badge-glow-success fs-6">+₹@Model.CurrentUserNetBalance.ToString("N2")</span>
+            }
+            else if (Model.CurrentUserNetBalance < -0.01m)
+            {
+                <span class="badge-glow-danger fs-6">-₹@Math.Abs(Model.CurrentUserNetBalance).ToString("N2")</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary-subtle text-secondary fs-6">Settled Up (₹0.00)</span>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- 7 Modern Navigation Tabs -->
+<ul class="nav nav-pills nav-pills-modern mb-4 flex-nowrap overflow-auto" id="groupTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(Model.ActiveTab == "overview" ? "active" : "") text-nowrap" id="overview-tab" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button" role="tab">
+            <i class="bi bi-grid-1x2 me-1"></i> Overview
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(Model.ActiveTab == "expenses" ? "active" : "") text-nowrap" id="expenses-tab" data-bs-toggle="pill" data-bs-target="#tab-expenses" type="button" role="tab">
+            <i class="bi bi-receipt me-1"></i> Expenses <span class="badge bg-secondary-subtle text-secondary ms-1">@Model.Expenses.Count</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(Model.ActiveTab == "members" ? "active" : "") text-nowrap" id="members-tab" data-bs-toggle="pill" data-bs-target="#tab-members" type="button" role="tab">
+            <i class="bi bi-people me-1"></i> Members <span class="badge bg-secondary-subtle text-secondary ms-1">@Model.Members.Count</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(Model.ActiveTab == "balances" ? "active" : "") text-nowrap" id="balances-tab" data-bs-toggle="pill" data-bs-target="#tab-balances" type="button" role="tab">
+            <i class="bi bi-wallet2 me-1"></i> Balances
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(Model.ActiveTab == "settlements" ? "active" : "") text-nowrap" id="settlements-tab" data-bs-toggle="pill" data-bs-target="#tab-settlements" type="button" role="tab">
+            <i class="bi bi-lightning-charge-fill me-1 text-warning"></i> Settlements
+            @if (Model.OptimizationResult.AfterTransactionCount > 0)
+            {
+                <span class="badge bg-primary ms-1">@Model.OptimizationResult.AfterTransactionCount</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(Model.ActiveTab == "analytics" ? "active" : "") text-nowrap" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#tab-analytics" type="button" role="tab">
+            <i class="bi bi-pie-chart me-1"></i> Analytics
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(Model.ActiveTab == "activity" ? "active" : "") text-nowrap" id="activity-tab" data-bs-toggle="pill" data-bs-target="#tab-activity" type="button" role="tab">
+            <i class="bi bi-clock-history me-1"></i> Activity Timeline
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Contents -->
+<div class="tab-content" id="groupTabsContent">
+    <!-- TAB 1: OVERVIEW -->
+    <div class="tab-pane fade @(Model.ActiveTab == "overview" ? "show active" : "")" id="tab-overview" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <!-- Recent Group Expenses Card -->
+                <div class="card-modern p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-receipt text-primary me-2"></i>Latest Expenses</h5>
+                        <button class="btn btn-sm btn-link text-decoration-none fw-semibold" onclick="switchTab('expenses')">View All</button>
+                    </div>
+
+                    @if (Model.Expenses.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <tbody>
+                                    @foreach (var exp in Model.Expenses.Take(5))
+                                    {
+                                        <tr>
+                                            <td style="width: 44px;">
+                                                <div class="stat-icon-wrapper rounded-circle" style="width: 38px; height: 38px; font-size: 1rem; background-color: @(exp.Category?.ColorHex ?? "#6B7280")20; color: @(exp.Category?.ColorHex ?? "#6B7280");">
+                                                    <i class="bi @(exp.Category?.Icon ?? "bi-tag")"></i>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <a asp-controller="Expenses" asp-action="Details" asp-route-id="@exp.Id" class="fw-bold text-decoration-none text-body d-block">@exp.Title</a>
+                                                <small class="text-muted">Paid by @(exp.PaidByUser.FullName ?? exp.PaidByUser.UserName) &bull; @exp.ExpenseDate.ToString("MMM dd")</small>
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="fw-bold">₹@exp.Amount.ToString("N2")</div>
+                                                <span class="badge bg-body-secondary text-muted" style="font-size: 0.7rem;">@exp.SplitType</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-receipt fs-2 d-block mb-2"></i>
+                            <p class="small mb-2">No expenses added yet.</p>
+                            <a asp-controller="Expenses" asp-action="Create" asp-route-groupId="@Model.Group.Id" class="btn btn-primary btn-sm rounded-pill">Add First Expense</a>
+                        </div>
+                    }
+                </div>
+
+                <!-- Recurring Bills in this group -->
+                <div class="card-modern p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-arrow-repeat text-danger me-2"></i>Recurring Subscriptions & Bills</h5>
+                        <a asp-controller="Recurring" asp-action="Create" asp-route-groupId="@Model.Group.Id" class="btn btn-sm btn-outline-secondary rounded-pill">
+                            <i class="bi bi-plus"></i> Add Recurring
+                        </a>
+                    </div>
+                    @if (Model.RecurringExpenses.Any())
+                    {
+                        <div class="vstack gap-2">
+                            @foreach (var rec in Model.RecurringExpenses)
+                            {
+                                <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center bg-body-tertiary">
+                                    <div>
+                                        <div class="fw-bold small">@rec.Title</div>
+                                        <small class="text-muted">Due: @rec.NextDueDate.ToString("MMM dd, yyyy") (@rec.Frequency)</small>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold">₹@rec.Amount.ToString("N2")</span>
+                                        <form asp-controller="Recurring" asp-action="GenerateExpenseNow" asp-route-id="@rec.Id" method="post">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" title="Generate expense now">
+                                                Post Now
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <small class="text-muted">No recurring bills set for this group (e.g. rent, wifi).</small>
+                    }
+                </div>
+            </div>
+
+            <!-- Overview Right Sidebar: Quick Optimization & Invite Link -->
+            <div class="col-lg-4">
+                <!-- Optimization Quick Box -->
+                <div class="card-modern p-4 mb-4 border-warning border-opacity-50">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
+                        <h6 class="fw-bold mb-0">Settlement Status</h6>
+                    </div>
+                    <p class="small text-muted mb-3">
+                        @if (Model.OptimizationResult.AfterTransactionCount > 0)
+                        {
+                            <span>Optimal plan reduces <strong>@Model.OptimizationResult.BeforeTransactionCount</strong> transfers down to <strong>@Model.OptimizationResult.AfterTransactionCount</strong> direct payments.</span>
+                        }
+                        else
+                        {
+                            <span>Everyone is currently squared away! No outstanding settlements needed.</span>
+                        }
+                    </p>
+                    <button class="btn btn-warning w-100 fw-semibold rounded-3 shadow-sm" onclick="switchTab('settlements')">
+                        <i class="bi bi-arrow-repeat me-1"></i> View Settlement Plan
+                    </button>
+                </div>
+
+                <!-- Invite Box -->
+                <div class="card-modern p-4">
+                    <h6 class="fw-bold mb-2"><i class="bi bi-share-fill text-primary me-2"></i>Invite Friends</h6>
+                    <p class="small text-muted mb-3">Share the invite link or code for friends to join this group:</p>
+
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control form-control-sm" value="@currentUrl" readonly id="groupShareUrl" />
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-copy="@currentUrl">Copy</button>
+                    </div>
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 rounded-3" data-bs-toggle="modal" data-bs-target="#qrModal">
+                        <i class="bi bi-qr-code me-1"></i> Show QR Code
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: EXPENSES -->
+    <div class="tab-pane fade @(Model.ActiveTab == "expenses" ? "show active" : "")" id="tab-expenses" role="tabpanel">
+        <div class="card-modern p-4">
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+                <div>
+                    <h5 class="fw-bold mb-0">Group Expenses Ledger</h5>
+                    <small class="text-muted">Itemized record of all purchases and split allocations</small>
+                </div>
+                <a asp-controller="Expenses" asp-action="Create" asp-route-groupId="@Model.Group.Id" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                    <i class="bi bi-plus-lg me-1"></i> Add Expense
+                </a>
+            </div>
+
+            @if (Model.Expenses.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Expense Details</th>
+                                <th>Paid By</th>
+                                <th>Split Mode</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var exp in Model.Expenses)
+                            {
+                                <tr>
+                                    <td class="small text-nowrap">@exp.ExpenseDate.ToString("MMM dd, yyyy")</td>
+                                    <td>
+                                        <span class="badge rounded-pill" style="background-color: @(exp.Category?.ColorHex ?? "#3B82F6")20; color: @(exp.Category?.ColorHex ?? "#3B82F6"); border: 1px solid @(exp.Category?.ColorHex ?? "#3B82F6")40;">
+                                            <i class="bi @(exp.Category?.Icon ?? "bi-tag") me-1"></i>@(exp.Category?.Name ?? "General")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Expenses" asp-action="Details" asp-route-id="@exp.Id" class="fw-bold text-decoration-none text-body">@exp.Title</a>
+                                        @if (!string.IsNullOrEmpty(exp.Notes))
+                                        {
+                                            <small class="text-muted d-block text-truncate" style="max-width: 250px;">@exp.Notes</small>
+                                        }
+                                        @if (!string.IsNullOrEmpty(exp.ReceiptUrl))
+                                        {
+                                            <a href="@exp.ReceiptUrl" target="_blank" class="badge bg-info-subtle text-info text-decoration-none mt-1">
+                                                <i class="bi bi-paperclip me-1"></i>Receipt
+                                            </a>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="small fw-semibold">@(exp.PaidByUser.FullName ?? exp.PaidByUser.UserName)</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-body-secondary text-secondary">@exp.SplitType</span>
+                                    </td>
+                                    <td class="text-end fw-bold">
+                                        ₹@exp.Amount.ToString("N2")
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a asp-controller="Expenses" asp-action="Details" asp-route-id="@exp.Id" class="btn btn-outline-secondary" title="Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            @if (exp.PaidByUserId == Model.CurrentUserId || Model.CurrentUserRole == MeraKharcha.Models.GroupRole.Owner || User.IsInRole("SystemAdmin"))
+                                            {
+                                                <form asp-controller="Expenses" asp-action="Delete" asp-route-id="@exp.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this expense?');">
+                                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-receipt fs-1 d-block mb-2"></i>
+                    <h6>No Expenses Yet</h6>
+                    <p class="small mb-3">Add dinner, rent, cab fares or groceries to start splitting.</p>
+                    <a asp-controller="Expenses" asp-action="Create" asp-route-groupId="@Model.Group.Id" class="btn btn-primary rounded-pill px-4">
+                        Add Expense
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- TAB 3: MEMBERS -->
+    <div class="tab-pane fade @(Model.ActiveTab == "members" ? "show active" : "")" id="tab-members" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card-modern p-4">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-people-fill text-primary me-2"></i>Group Members (@Model.Members.Count)</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Member</th>
+                                    <th>Role</th>
+                                    <th>UPI ID</th>
+                                    <th class="text-end">Net Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in Model.Members)
+                                {
+                                    var bal = Model.Balances.FirstOrDefault(b => b.UserId == m.UserId);
+                                    var net = bal?.NetBalance ?? 0m;
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                @if (!string.IsNullOrEmpty(m.User.AvatarUrl))
+                                                {
+                                                    <img src="@m.User.AvatarUrl" class="rounded-circle object-fit-cover" style="width: 36px; height: 36px;" alt="Avatar" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px; font-size: 0.85rem;">
+                                                        @(m.User.FullName.Substring(0, 1).ToUpper())
+                                                    </div>
+                                                }
+                                                <div>
+                                                    <div class="fw-bold small">@m.User.FullName</div>
+                                                    <small class="text-muted">@m.User.Email</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(m.Role == MeraKharcha.Models.GroupRole.Owner ? "bg-warning-subtle text-warning-emphasis" : m.Role == MeraKharcha.Models.GroupRole.Admin ? "bg-primary-subtle text-primary" : "bg-body-secondary text-secondary")">
+                                                @m.Role
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">@(string.IsNullOrEmpty(m.User.UpiId) ? "-" : m.User.UpiId)</small>
+                                        </td>
+                                        <td class="text-end">
+                                            @if (net > 0.01m)
+                                            {
+                                                <span class="badge-glow-success">+₹@net.ToString("N2")</span>
+                                            }
+                                            else if (net < -0.01m)
+                                            {
+                                                <span class="badge-glow-danger">-₹@Math.Abs(net).ToString("N2")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary">₹0.00</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Member Form -->
+            <div class="col-lg-4">
+                <div class="card-modern p-4">
+                    <h5 class="fw-bold mb-2"><i class="bi bi-person-plus-fill text-success me-2"></i>Add Member</h5>
+                    <p class="small text-muted mb-3">Add an existing user to this group by entering their registered email address.</p>
+
+                    <form asp-action="AddMemberByEmail" method="post">
+                        <input type="hidden" name="groupId" value="@Model.Group.Id" />
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">User Email Address</label>
+                            <input type="email" name="email" class="form-control form-control-sm" placeholder="friend@example.com" required />
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm w-100 rounded-3 shadow-sm">
+                            <i class="bi bi-plus-circle me-1"></i> Add to Group
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: BALANCES -->
+    <div class="tab-pane fade @(Model.ActiveTab == "balances" ? "show active" : "")" id="tab-balances" role="tabpanel">
+        <div class="row g-4 mb-4">
+            @foreach (var b in Model.Balances)
+            {
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-truncate" style="max-width: 140px;">@b.UserName</span>
+                            @if (b.NetBalance > 0.01m)
+                            {
+                                <span class="badge bg-success-subtle text-success small">Gets back</span>
+                            }
+                            else if (b.NetBalance < -0.01m)
+                            {
+                                <span class="badge bg-danger-subtle text-danger small">Owes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary-subtle text-secondary small">Settled</span>
+                            }
+                        </div>
+                        <h4 class="fw-bold mb-1 @(b.NetBalance > 0.01m ? "text-success" : b.NetBalance < -0.01m ? "text-danger" : "")">
+                            @(b.NetBalance > 0 ? "+" : "")₹@b.NetBalance.ToString("N2")
+                        </h4>
+                        <div class="d-flex justify-content-between small text-muted" style="font-size: 0.75rem;">
+                            <span>Paid: ₹@b.TotalPaid.ToString("N0")</span>
+                            <span>Share: ₹@b.TotalShare.ToString("N0")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Pairwise Debt Matrix (Before Optimization) -->
+        <div class="card-modern p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-0"><i class="bi bi-arrow-left-right text-info me-2"></i>Raw Pairwise Debts (Before Optimization)</h5>
+                    <small class="text-muted">Un-optimized direct bilateral debts between members</small>
+                </div>
+                <span class="badge bg-info-subtle text-info">@Model.RawPairwiseDebts.Count Pairwise Debts</span>
+            </div>
+
+            @if (Model.RawPairwiseDebts.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Debtor (Who Owes)</th>
+                                <th>Creditor (Who is Owed)</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var debt in Model.RawPairwiseDebts)
+                            {
+                                <tr>
+                                    <td class="fw-semibold text-danger">@debt.FromUserName</td>
+                                    <td class="fw-semibold text-success">@debt.ToUserName</td>
+                                    <td class="text-end fw-bold">₹@debt.Amount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted small">
+                    No active pairwise debts found.
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- TAB 5: SETTLEMENTS (OPTIMIZER CORE) -->
+    <div class="tab-pane fade @(Model.ActiveTab == "settlements" ? "show active" : "")" id="tab-settlements" role="tabpanel">
+        <!-- Optimization Metric Banner -->
+        <div class="optimizer-banner mb-4 shadow">
+            <div class="row align-items-center position-relative" style="z-index: 2;">
+                <div class="col-md-8">
+                    <span class="badge bg-light text-primary fw-bold px-2 py-1 mb-2">Greedy Graph Reduction</span>
+                    <h4 class="fw-extrabold mb-1">Minimum-Transaction Settlement Engine</h4>
+                    <p class="mb-0 opacity-90 small">
+                        Instead of @Model.OptimizationResult.BeforeTransactionCount separate transfers between individuals, our optimizer calculates that only <strong>@Model.OptimizationResult.AfterTransactionCount direct payments</strong> are required to completely square all debts!
+                    </p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <div class="d-inline-flex align-items-center bg-white bg-opacity-25 rounded-4 p-3 gap-3">
+                        <div class="text-center">
+                            <span class="small d-block opacity-75">Before</span>
+                            <span class="fs-4 fw-bold">@Model.OptimizationResult.BeforeTransactionCount</span>
+                        </div>
+                        <i class="bi bi-arrow-right fs-4"></i>
+                        <div class="text-center">
+                            <span class="small d-block opacity-75">Optimized</span>
+                            <span class="fs-4 fw-bold text-warning">@Model.OptimizationResult.AfterTransactionCount</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optimized Transactions List -->
+        <div class="card-modern p-4 mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-check2-circle text-success me-2"></i>Recommended Optimal Payment Transfers</h5>
+
+            @if (Model.OptimizationResult.Transactions.Any())
+            {
+                <div class="vstack gap-3">
+                    @foreach (var t in Model.OptimizationResult.Transactions)
+                    {
+                        var receiverUser = Model.Members.FirstOrDefault(m => m.UserId == t.ReceiverUserId)?.User;
+                        <div class="p-3 border rounded-3 bg-body-tertiary d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-circle" style="width: 44px; height: 44px;">
+                                    <i class="bi bi-arrow-right-circle fs-4"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">
+                                        <span class="text-danger">@t.PayerName</span> pays <span class="text-success">@t.ReceiverName</span>
+                                    </div>
+                                    <small class="text-muted">
+                                        Receiver UPI: <strong>@(string.IsNullOrEmpty(receiverUser?.UpiId) ? "Ask receiver for UPI" : receiverUser.UpiId)</strong>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-3 justify-content-between">
+                                <span class="fs-5 fw-bold text-primary">₹@t.Amount.ToString("N2")</span>
+
+                                @if (t.PayerUserId == Model.CurrentUserId)
+                                {
+                                    <button type="button" class="btn btn-success btn-sm rounded-pill px-4 shadow-sm"
+                                            onclick="openPayModal('@t.ReceiverUserId', '@t.ReceiverName', '@(receiverUser?.UpiId ?? "")', '@t.Amount')">
+                                        <i class="bi bi-cash me-1"></i> Pay Now
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                            onclick="openPayModal('@t.ReceiverUserId', '@t.ReceiverName', '@(receiverUser?.UpiId ?? "")', '@t.Amount')">
+                                        Record Payment
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-check-circle-fill fs-1 text-success d-block mb-2"></i>
+                    <h5>All Settled Up!</h5>
+                    <p class="small">No pending settlements required in this group.</p>
+                </div>
+            }
+        </div>
+
+        <!-- Settlement History Table -->
+        <div class="card-modern p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-clock-history text-muted me-2"></i>Settlement History & Confirmations</h5>
+            @if (Model.Settlements.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Payer</th>
+                                <th>Receiver</th>
+                                <th>Amount</th>
+                                <th>Method / Ref</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Settlements)
+                            {
+                                <tr>
+                                    <td class="small">@s.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                    <td class="fw-semibold">@s.PayerUser.FullName</td>
+                                    <td class="fw-semibold">@s.ReceiverUser.FullName</td>
+                                    <td class="fw-bold text-primary">₹@s.Amount.ToString("N2")</td>
+                                    <td class="small">
+                                        <span>@s.PaymentMethod</span>
+                                        @if (!string.IsNullOrEmpty(s.TransactionReference))
+                                        {
+                                            <span class="badge bg-body-secondary text-muted ms-1">@s.TransactionReference</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (s.Status == MeraKharcha.Models.SettlementStatus.Confirmed)
+                                        {
+                                            <span class="badge bg-success-subtle text-success"><i class="bi bi-check-all me-1"></i>Confirmed</span>
+                                        }
+                                        else if (s.Status == MeraKharcha.Models.SettlementStatus.Paid)
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-clock me-1"></i>Pending Confirmation</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary">@s.Status</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (s.Status == MeraKharcha.Models.SettlementStatus.Paid && (s.ReceiverUserId == Model.CurrentUserId || User.IsInRole("SystemAdmin")))
+                                        {
+                                            <form asp-controller="Settlements" asp-action="Confirm" asp-route-id="@s.Id" method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm">
+                                                    <i class="bi bi-check2"></i> Confirm Received
+                                                </button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <small class="text-muted">No settlement history logged yet.</small>
+            }
+        </div>
+    </div>
+
+    <!-- TAB 6: ANALYTICS -->
+    <div class="tab-pane fade @(Model.ActiveTab == "analytics" ? "show active" : "")" id="tab-analytics" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card-modern p-4 h-100">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-pie-chart text-primary me-2"></i>Category Spending Breakdown</h5>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="groupCategoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card-modern p-4 h-100">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart text-success me-2"></i>Member Contributions (Paid Amount)</h5>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="groupMemberChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 7: ACTIVITY TIMELINE -->
+    <div class="tab-pane fade @(Model.ActiveTab == "activity" ? "show active" : "")" id="tab-activity" role="tabpanel">
+        <div class="card-modern p-4">
+            <h5 class="fw-bold mb-4"><i class="bi bi-clock-history text-info me-2"></i>Group Activity Log</h5>
+            @if (Model.ActivityLogs.Any())
+            {
+                <div class="timeline vstack gap-3">
+                    @foreach (var log in Model.ActivityLogs)
+                    {
+                        <div class="d-flex align-items-start gap-3 p-2 rounded-3 border-bottom border-light">
+                            <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-circle" style="width: 38px; height: 38px;">
+                                <i class="bi bi-bell"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold small">@log.Description</div>
+                                <small class="text-muted">@log.CreatedAt.ToString("f")</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted small">No activity recorded yet.</div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="qrModalLabel"><i class="bi bi-qr-code me-2 text-primary"></i>Join @Model.Group.Name</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p class="text-muted small mb-3">Scan this code with your mobile camera to join immediately:</p>
+                <div class="p-3 bg-white d-inline-block rounded-4 shadow-sm border mb-3">
+                    <!-- Dynamic QR Code generated via API -->
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=@Uri.EscapeDataString(currentUrl)" alt="QR Code" class="img-fluid" style="width: 180px; height: 180px;" />
+                </div>
+                <div class="input-group mb-2 px-3">
+                    <input type="text" class="form-control form-control-sm text-center fw-bold" value="@Model.Group.InviteCode" readonly />
+                    <button class="btn btn-outline-primary btn-sm" type="button" data-copy="@Model.Group.InviteCode">Copy Code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Record / Pay Settlement Modal -->
+<div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <form asp-controller="Settlements" asp-action="Create" method="post">
+                <input type="hidden" name="GroupId" value="@Model.Group.Id" />
+                <input type="hidden" id="payReceiverUserId" name="ReceiverUserId" />
+
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-wallet2 me-2 text-success"></i>Record Settlement</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Paying To</label>
+                        <input type="text" id="payReceiverName" class="form-control" readonly disabled />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Receiver's UPI ID</label>
+                        <input type="text" id="payReceiverUpi" class="form-control" readonly disabled />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Amount (₹) *</label>
+                        <input type="number" step="0.01" id="payAmount" name="Amount" class="form-control fw-bold fs-5 text-primary" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Payment Method</label>
+                        <select name="PaymentMethod" class="form-select">
+                            <option value="UPI (GPay / PhonePe / Paytm)">UPI (Google Pay / PhonePe / Paytm)</option>
+                            <option value="Cash">Cash in Hand</option>
+                            <option value="Bank Transfer (IMPS / NEFT)">Bank Transfer (IMPS / NEFT)</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Transaction Reference / UTR (Optional)</label>
+                        <input type="text" name="TransactionReference" class="form-control" placeholder="e.g. UTR12345678" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Notes (Optional)</label>
+                        <input type="text" name="Notes" class="form-control" placeholder="e.g. Cleared Goa dinner bill" />
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Submit Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function switchTab(tabId) {
+            const tabBtn = document.getElementById(tabId + '-tab');
+            if (tabBtn) {
+                const trigger = new bootstrap.Tab(tabBtn);
+                trigger.show();
+            }
+        }
+
+        function openPayModal(receiverId, receiverName, receiverUpi, amount) {
+            document.getElementById('payReceiverUserId').value = receiverId;
+            document.getElementById('payReceiverName').value = receiverName;
+            document.getElementById('payReceiverUpi').value = receiverUpi || 'Not provided (Pay via Cash/Bank)';
+            document.getElementById('payAmount').value = amount;
+
+            const modal = new bootstrap.Modal(document.getElementById('payModal'));
+            modal.show();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Group Category Chart
+            const catLabels = @Html.Raw(Model.CategoryLabelsJson);
+            const catData = @Html.Raw(Model.CategoryDataJson);
+            const catColors = @Html.Raw(Model.CategoryColorsJson);
+
+            const catEl = document.getElementById('groupCategoryChart');
+            if (catEl) {
+                new Chart(catEl.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: catLabels,
+                        datasets: [{ data: catData, backgroundColor: catColors, borderWidth: 2 }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+            }
+
+            // Group Member Contribution Chart
+            const memLabels = @Html.Raw(Model.MemberSpendingLabelsJson);
+            const memData = @Html.Raw(Model.MemberSpendingDataJson);
+
+            const memEl = document.getElementById('groupMemberChart');
+            if (memEl) {
+                new Chart(memEl.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: memLabels,
+                        datasets: [{
+                            label: 'Total Paid (₹)',
+                            data: memData,
+                            backgroundColor: '#4f46e5',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+        });
+    </script>
+}

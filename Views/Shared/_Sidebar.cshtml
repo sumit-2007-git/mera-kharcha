@@ -1,0 +1,110 @@
+@using Microsoft.AspNetCore.Identity
+@using MeraKharcha.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<aside class="app-sidebar">
+    <a asp-controller="Home" asp-action="Index" class="sidebar-brand">
+        <div class="stat-icon-wrapper bg-primary text-white shadow-sm" style="width: 38px; height: 38px; font-size: 1.1rem;">
+            <i class="bi bi-wallet2"></i>
+        </div>
+        <span>Mera<span class="text-secondary fw-normal">Kharcha</span></span>
+    </a>
+
+    <div class="sidebar-nav">
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <div class="nav-section-title">Workspace</div>
+            <a asp-controller="Dashboard" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>Dashboard</span>
+            </a>
+            <a asp-controller="Groups" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Groups" ? "active" : "")">
+                <i class="bi bi-people-fill"></i>
+                <span>My Groups</span>
+            </a>
+            <a asp-controller="Recurring" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Recurring" ? "active" : "")">
+                <i class="bi bi-arrow-repeat"></i>
+                <span>Recurring Bills</span>
+            </a>
+            <a asp-controller="Reports" asp-action="PersonalReport" class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" ? "active" : "")">
+                <i class="bi bi-file-earmark-bar-graph-fill"></i>
+                <span>My Analytics</span>
+            </a>
+
+            <div class="nav-section-title mt-3">Quick Actions</div>
+            <a asp-controller="Groups" asp-action="Create" class="sidebar-link text-primary fw-semibold">
+                <i class="bi bi-plus-circle-fill"></i>
+                <span>Create Group</span>
+            </a>
+            <a asp-controller="Groups" asp-action="Join" class="sidebar-link text-success fw-semibold">
+                <i class="bi bi-qr-code-scan"></i>
+                <span>Join via Code</span>
+            </a>
+
+            @if (User.IsInRole("SystemAdmin"))
+            {
+                <div class="nav-section-title mt-3 text-danger">Administration</div>
+                <a asp-area="Admin" asp-controller="Admin" asp-action="Index" class="sidebar-link @(ViewContext.RouteData.Values["area"]?.ToString() == "Admin" ? "active" : "")">
+                    <i class="bi bi-shield-lock-fill text-danger"></i>
+                    <span>Admin Console</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Users" asp-action="Index" class="sidebar-link">
+                    <i class="bi bi-person-gear"></i>
+                    <span>Users</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Groups" asp-action="Index" class="sidebar-link">
+                    <i class="bi bi-collection-fill"></i>
+                    <span>All Groups</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="sidebar-link">
+                    <i class="bi bi-tags-fill"></i>
+                    <span>Categories</span>
+                </a>
+                <a asp-area="Admin" asp-controller="AuditLogs" asp-action="Index" class="sidebar-link">
+                    <i class="bi bi-journal-text"></i>
+                    <span>Audit Logs</span>
+                </a>
+            }
+        }
+        else
+        {
+            <div class="nav-section-title">Welcome</div>
+            <a asp-controller="Home" asp-action="Index" class="sidebar-link active">
+                <i class="bi bi-house-door-fill"></i>
+                <span>Home Page</span>
+            </a>
+            <a asp-controller="Account" asp-action="Login" class="sidebar-link">
+                <i class="bi bi-box-arrow-in-right"></i>
+                <span>Login</span>
+            </a>
+            <a asp-controller="Account" asp-action="Register" class="sidebar-link">
+                <i class="bi bi-person-plus-fill"></i>
+                <span>Register Free</span>
+            </a>
+        }
+    </div>
+
+    @if (SignInManager.IsSignedIn(User))
+    {
+        var currentUser = await UserManager.GetUserAsync(User);
+        <div class="p-3 border-top border-light">
+            <div class="d-flex align-items-center gap-3">
+                @if (!string.IsNullOrEmpty(currentUser?.AvatarUrl))
+                {
+                    <img src="@currentUser.AvatarUrl" class="rounded-circle object-fit-cover shadow-sm" style="width: 40px; height: 40px;" alt="Avatar" />
+                }
+                else
+                {
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 40px; height: 40px;">
+                        @(currentUser?.FullName?.Substring(0, 1).ToUpper() ?? "U")
+                    </div>
+                }
+                <div class="overflow-hidden flex-grow-1">
+                    <div class="fw-bold text-truncate small">@(currentUser?.FullName ?? currentUser?.UserName)</div>
+                    <small class="text-muted text-truncate d-block" style="font-size: 0.75rem;">@(currentUser?.Email)</small>
+                </div>
+            </div>
+        </div>
+    }
+</aside>
