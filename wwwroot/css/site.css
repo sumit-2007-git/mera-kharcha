@@ -1,146 +1,206 @@
 /* ==========================================================================
-   Mera Kharcha - Solcon Design System Inspired CSS
-   Aesthetic: Vibrant Solar Radiant Orange (#FF6B00), Warm Golden Amber (#FFA800),
-   Crisp Modern Glassmorphism & High-Contrast Corporate Slate (#0F172A).
+   Mera Kharcha - Official Solcon (solcon.co.in) Design System
+   Brand Accent: Vibrant Construction Orange (#f0601a)
+   Canvas: Warm Sand / Cream (#fffbf6)
+   Surfaces: Obsidian Charcoal (#1C1C1D) & Soft Cream (#f8f2e9)
+   Typography: Outfit (Headings) & Poppins (Body Text)
    ========================================================================== */
 
 :root {
-    /* Solcon Color System */
-    --primary: #FF6B00;
-    --primary-hover: #E05D00;
-    --primary-gradient: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%);
-    --primary-gradient-subtle: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 168, 0, 0.12) 100%);
-    --primary-light: rgba(255, 107, 0, 0.10);
-    --primary-glow: 0 4px 18px rgba(255, 107, 0, 0.35);
+    /* Solcon Design System Variables */
+    --tl-color-theme-primary: #f0601a;
+    --tl-color-theme-primary-hover: #d85212;
+    --tl-color-bg-dark: #1C1C1D;
+    --tl-color-bg-light: #fffbf6;
+    --tl-color-bg-cream: #f8f2e9;
+    --tl-color-bg-grey: #efefef;
+    --tl-color-heading-primary: #191919;
+    --tl-color-text-body: #4D4D52;
+    --tl-color-grey-1: #59585D;
+    --tl-color-grey-2: #9F9FA4;
+    --tl-color-border-1: #E3E3E8;
 
-    --accent-gold: #F59E0B;
-    --accent-amber: #D97706;
-    --slate-dark: #0F172A;
-    --slate-card: #1E293B;
+    --tl-ff-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --tl-ff-body: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
 
-    --bg-body: #F8FAFC;
-    --bg-surface: #FFFFFF;
-    --bg-card: #FFFFFF;
-    --text-main: #0F172A;
-    --text-muted: #64748B;
-    --border-color: #E2E8F0;
-    --border-light: #F1F5F9;
+    /* Semantic Mappings */
+    --primary: var(--tl-color-theme-primary);
+    --primary-hover: var(--tl-color-theme-primary-hover);
+    --bg-body: var(--tl-color-bg-light);
+    --bg-surface: #ffffff;
+    --bg-card: #ffffff;
+    --text-main: var(--tl-color-heading-primary);
+    --text-muted: var(--tl-color-grey-1);
+    --border-color: var(--tl-color-border-1);
 
     --success: #10B981;
-    --success-light: rgba(16, 185, 129, 0.12);
     --danger: #EF4444;
-    --danger-light: rgba(239, 68, 68, 0.12);
     --warning: #F59E0B;
-    --warning-light: rgba(245, 158, 11, 0.12);
     --info: #06B6D4;
-    --info-light: rgba(6, 182, 212, 0.12);
 
     --sidebar-width: 260px;
-    --navbar-height: 70px;
-    --card-radius: 1.25rem;
-
-    --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04), 0 20px 25px -5px rgba(255, 107, 0, 0.02);
-    --card-shadow-hover: 0 16px 36px -6px rgba(255, 107, 0, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+    --navbar-height: 72px;
+    --radius-pill: 100px;
+    --radius-card: 20px;
 }
 
 [data-bs-theme="dark"] {
-    --bg-body: #0B0F19;
-    --bg-surface: #111827;
-    --bg-card: #141D2F;
-    --text-main: #F8FAFC;
-    --text-muted: #94A3B8;
-    --border-color: #1E293B;
-    --border-light: #1E293B;
-
-    --primary: #FF8024;
-    --primary-hover: #FF6B00;
-    --primary-gradient: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%);
-    --primary-gradient-subtle: linear-gradient(135deg, rgba(255, 107, 0, 0.14) 0%, rgba(255, 168, 0, 0.18) 100%);
-    --primary-light: rgba(255, 107, 0, 0.18);
-    --primary-glow: 0 4px 20px rgba(255, 107, 0, 0.45);
-
-    --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.45);
-    --card-shadow-hover: 0 16px 36px -6px rgba(255, 107, 0, 0.22);
+    --bg-body: #111112;
+    --bg-surface: var(--tl-color-bg-dark);
+    --bg-card: #181819;
+    --text-main: #F5F5F7;
+    --text-muted: var(--tl-color-grey-2);
+    --border-color: #2D2D30;
+    --tl-color-bg-cream: #222224;
+    --tl-color-heading-primary: #F5F5F7;
+    --tl-color-text-body: #B0B0B5;
 }
 
+/* ==========================================================================
+   Base & Global Typography (Outfit + Poppins)
+   ========================================================================== */
 body {
     background-color: var(--bg-body);
-    background-image: radial-gradient(circle at 50% 0%, rgba(255, 107, 0, 0.04) 0%, transparent 60%);
-    color: var(--text-main);
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: var(--tl-color-text-body);
+    font-family: var(--tl-ff-body);
+    font-size: 15px;
+    line-height: 1.7;
     letter-spacing: -0.01em;
-    transition: background-color 0.25s ease, color 0.25s ease;
     overflow-x: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* ==========================================================================
-   Typography & Gradient Accents (Solcon Inspired)
-   ========================================================================== */
-.text-gradient-solar,
-.text-primary-gradient {
-    background: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    font-family: var(--tl-ff-heading);
+    color: var(--tl-color-heading-primary);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+/* Solcon Signature Two-Tone Headings */
+.section-title span,
+.text-solcon,
+.text-solcon-orange {
+    color: var(--tl-color-theme-primary) !important;
+}
+
+/* Solcon Section Indicator Pill Badge */
+.sub-heading-pill,
+.badge-solar,
+.solcon-pill {
+    font-family: var(--tl-ff-heading);
+    color: var(--tl-color-heading-primary);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 18px 6px 28px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(114, 114, 114, 0.22);
+    position: relative;
     display: inline-block;
+    background: transparent;
 }
 
-.text-solar {
-    color: var(--primary) !important;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.025em;
-    font-weight: 700;
-    color: var(--text-main);
+.sub-heading-pill::before,
+.badge-solar::before,
+.solcon-pill::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--tl-color-theme-primary);
 }
 
 /* ==========================================================================
-   Buttons (Solar Glow & Pill Styles)
+   Buttons (Solcon Construction Orange Pill CTAs)
    ========================================================================== */
 .btn-primary,
-.btn-solar {
-    background: var(--primary-gradient) !important;
+.btn-solar,
+.header-btn {
+    background-color: var(--tl-color-theme-primary) !important;
     border: none !important;
     color: #ffffff !important;
-    font-weight: 600;
-    border-radius: 9999px;
-    box-shadow: 0 4px 14px 0 rgba(255, 107, 0, 0.35);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: var(--tl-ff-heading);
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    padding: 0.65rem 1.6rem;
+    box-shadow: 0 4px 14px rgba(240, 96, 26, 0.32);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-primary:hover,
-.btn-solar:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 22px 0 rgba(255, 107, 0, 0.50);
+.btn-solar:hover,
+.header-btn:hover {
+    background-color: #191919 !important;
     color: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(25, 25, 25, 0.25);
 }
 
-.btn-primary:active,
-.btn-solar:active {
+.btn-primary:active {
     transform: translateY(0);
 }
 
-.btn-outline-primary,
-.btn-outline-solar {
-    border: 1.5px solid var(--primary) !important;
-    color: var(--primary) !important;
+.btn-outline-primary {
+    border: 1.5px solid rgba(159, 159, 164, 0.65) !important;
+    color: var(--tl-color-heading-primary) !important;
     background: transparent !important;
-    font-weight: 600;
-    border-radius: 9999px;
-    transition: all 0.25s ease;
+    font-family: var(--tl-ff-heading);
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    padding: 0.65rem 1.4rem;
+    transition: all 0.3s ease;
 }
 
-.btn-outline-primary:hover,
-.btn-outline-solar:hover {
-    background: var(--primary-gradient) !important;
+.btn-outline-primary:hover {
+    background-color: var(--tl-color-theme-primary) !important;
     color: #ffffff !important;
-    border-color: transparent !important;
+    border-color: var(--tl-color-theme-primary) !important;
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.35);
+    box-shadow: 0 4px 14px rgba(240, 96, 26, 0.28);
 }
 
 /* ==========================================================================
-   Layout Elements
+   Form Controls (Solcon Soft Cream Inputs)
+   ========================================================================== */
+.form-control,
+.form-select {
+    background-color: var(--tl-color-bg-cream) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-pill);
+    padding: 0.65rem 1.25rem;
+    font-family: var(--tl-ff-body);
+    font-size: 0.92rem;
+    color: var(--tl-color-heading-primary) !important;
+    transition: all 0.25s ease;
+}
+
+textarea.form-control {
+    border-radius: 18px !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: #ffffff !important;
+    border-color: var(--tl-color-theme-primary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(240, 96, 26, 0.20) !important;
+}
+
+.input-group-text {
+    background-color: var(--tl-color-bg-cream);
+    border-color: var(--border-color);
+    border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+}
+
+/* ==========================================================================
+   Layout (Sidebar, Navbar & Content)
    ========================================================================== */
 .app-wrapper {
     display: flex;
@@ -184,17 +244,17 @@ h1, h2, h3, h4, h5, h6 {
 
 .app-navbar {
     height: var(--navbar-height);
-    background-color: rgba(255, 255, 255, 0.88);
+    background-color: rgba(255, 251, 246, 0.92);
     border-bottom: 1px solid var(--border-color);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     position: sticky;
     top: 0;
     z-index: 1010;
 }
 
 [data-bs-theme="dark"] .app-navbar {
-    background-color: rgba(17, 24, 39, 0.88);
+    background-color: rgba(28, 28, 29, 0.92);
 }
 
 .app-content {
@@ -203,32 +263,34 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ==========================================================================
-   Sidebar Navigation
+   Sidebar Brand & Links
    ========================================================================== */
 .sidebar-brand {
-    padding: 1.25rem 1.5rem;
+    padding: 1.35rem 1.5rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    font-size: 1.25rem;
-    font-weight: 800;
-    color: var(--text-main);
+    font-size: 1.3rem;
+    font-family: var(--tl-ff-heading);
+    font-weight: 700;
+    color: var(--tl-color-heading-primary);
     text-decoration: none;
     border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-nav {
-    padding: 1rem 0.75rem;
+    padding: 1.25rem 0.85rem;
     flex: 1;
     overflow-y: auto;
 }
 
 .nav-section-title {
+    font-family: var(--tl-ff-heading);
     font-size: 0.72rem;
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    color: var(--tl-color-grey-1);
     padding: 0.75rem 0.75rem 0.35rem;
 }
 
@@ -236,12 +298,13 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.65rem 0.85rem;
-    border-radius: 0.75rem;
-    color: var(--text-muted);
+    padding: 0.65rem 0.95rem;
+    border-radius: var(--radius-pill);
+    color: var(--tl-color-text-body);
     text-decoration: none;
-    font-weight: 600;
-    font-size: 0.92rem;
+    font-family: var(--tl-ff-heading);
+    font-weight: 500;
+    font-size: 0.94rem;
     margin-bottom: 0.25rem;
     transition: all 0.2s ease;
 }
@@ -251,110 +314,65 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .sidebar-link:hover {
-    color: var(--primary);
-    background-color: var(--primary-light);
+    color: var(--tl-color-theme-primary);
+    background-color: var(--tl-color-bg-cream);
     transform: translateX(3px);
 }
 
 .sidebar-link.active {
     color: #ffffff !important;
-    background: var(--primary-gradient) !important;
-    box-shadow: 0 4px 14px rgba(255, 107, 0, 0.35);
+    background-color: var(--tl-color-theme-primary) !important;
+    box-shadow: 0 4px 14px rgba(240, 96, 26, 0.32);
 }
 
 /* ==========================================================================
-   Cards & Components (Solcon Clean Elevation)
+   Cards & Elevated Surfaces (Solcon Clean Neutral Elevation)
    ========================================================================== */
 .card-modern {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--card-radius);
-    box-shadow: var(--card-shadow);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: var(--radius-card);
+    box-shadow: 0 8px 24px -4px rgba(28, 28, 29, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
 }
 
 .card-modern:hover {
-    border-color: rgba(255, 107, 0, 0.35);
-    box-shadow: var(--card-shadow-hover);
+    border-color: rgba(240, 96, 26, 0.35);
+    box-shadow: 0 16px 32px -6px rgba(240, 96, 26, 0.12);
     transform: translateY(-3px);
 }
 
 .stat-card {
     position: relative;
     padding: 1.4rem;
-    border-radius: var(--card-radius);
+    border-radius: var(--radius-card);
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    box-shadow: var(--card-shadow);
+    box-shadow: 0 6px 20px -2px rgba(28, 28, 29, 0.04);
     transition: all 0.25s ease;
 }
 
 .stat-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(255, 107, 0, 0.3);
-    box-shadow: var(--card-shadow-hover);
+    border-color: rgba(240, 96, 26, 0.35);
 }
 
 .stat-icon-wrapper {
     width: 48px;
     height: 48px;
-    border-radius: 14px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.35rem;
-    background: var(--primary-gradient);
+    font-size: 1.3rem;
+    background-color: var(--tl-color-theme-primary);
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
-}
-
-/* Badges */
-.badge-solar {
-    background: rgba(254, 243, 199, 0.85);
-    color: #C2410C;
-    border: 1px solid rgba(251, 191, 36, 0.6);
-    font-weight: 700;
-    padding: 0.35rem 0.75rem;
-    border-radius: 9999px;
-    letter-spacing: 0.02em;
-}
-
-[data-bs-theme="dark"] .badge-solar {
-    background: rgba(255, 107, 0, 0.15);
-    color: #FBBF24;
-    border-color: rgba(255, 107, 0, 0.35);
-}
-
-.badge-glow-success {
-    background-color: var(--success-light);
-    color: var(--success);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    font-weight: 700;
-    padding: 0.35rem 0.65rem;
-    border-radius: 9999px;
-}
-
-.badge-glow-danger {
-    background-color: var(--danger-light);
-    color: var(--danger);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    font-weight: 700;
-    padding: 0.35rem 0.65rem;
-    border-radius: 9999px;
-}
-
-.badge-glow-primary {
-    background-color: var(--primary-light);
-    color: var(--primary);
-    border: 1px solid rgba(255, 107, 0, 0.3);
-    font-weight: 700;
-    padding: 0.35rem 0.65rem;
-    border-radius: 9999px;
+    box-shadow: 0 4px 12px rgba(240, 96, 26, 0.3);
 }
 
 /* ==========================================================================
-   Navigation Tabs (Pills)
+   Tabs & Navigation Pills
    ========================================================================== */
 .nav-pills-modern {
     gap: 0.5rem;
@@ -363,64 +381,83 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-pills-modern .nav-link {
-    color: var(--text-muted);
-    font-weight: 600;
-    border-radius: 0.75rem;
-    padding: 0.6rem 1.15rem;
+    font-family: var(--tl-ff-heading);
+    color: var(--tl-color-text-body);
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    padding: 0.6rem 1.25rem;
     border: 1px solid transparent;
     transition: all 0.2s ease;
 }
 
 .nav-pills-modern .nav-link:hover {
-    color: var(--primary);
-    background-color: var(--primary-light);
+    color: var(--tl-color-theme-primary);
+    background-color: var(--tl-color-bg-cream);
 }
 
 .nav-pills-modern .nav-link.active {
-    background: var(--primary-gradient) !important;
+    background-color: var(--tl-color-theme-primary) !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(255, 107, 0, 0.35);
+    box-shadow: 0 4px 14px rgba(240, 96, 26, 0.32);
 }
 
 /* ==========================================================================
-   Optimizer & Hero Banners (Solcon Midnight Solar Gradient)
+   Solcon Dark Feature Banner (Optimizer Banner)
    ========================================================================== */
 .optimizer-banner {
-    background: linear-gradient(135deg, #0F172A 0%, #1E293B 65%, #C2410C 150%);
-    border-radius: var(--card-radius);
+    background-color: var(--tl-color-bg-dark);
+    border: 1px solid rgba(240, 96, 26, 0.25);
+    border-radius: var(--radius-card);
     color: #ffffff;
-    padding: 1.85rem;
+    padding: 2rem;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.3), 0 4px 14px rgba(255, 107, 0, 0.2);
+    box-shadow: 0 12px 32px rgba(28, 28, 29, 0.35);
+}
+
+.optimizer-banner h2,
+.optimizer-banner h4 {
+    color: #ffffff;
 }
 
 .optimizer-banner::after {
     content: "";
     position: absolute;
-    width: 280px;
-    height: 280px;
-    background: radial-gradient(circle, rgba(255, 107, 0, 0.25) 0%, transparent 70%);
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(240, 96, 26, 0.25) 0%, transparent 70%);
     border-radius: 50%;
-    top: -80px;
+    top: -60px;
     right: -40px;
     pointer-events: none;
 }
 
-/* Form Inputs Focus Accent */
-.form-control:focus,
-.form-select:focus {
-    border-color: #FF6B00 !important;
-    box-shadow: 0 0 0 0.25rem rgba(255, 107, 0, 0.20) !important;
+/* Badges */
+.badge-glow-success {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
 }
 
-/* Progress Bar Solar Glow */
-.progress-bar {
-    border-radius: 9999px;
+.badge-glow-danger {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
 }
 
-.progress-bar.bg-primary {
-    background: var(--primary-gradient) !important;
+.badge-glow-primary {
+    background-color: rgba(240, 96, 26, 0.12);
+    color: var(--tl-color-theme-primary);
+    border: 1px solid rgba(240, 96, 26, 0.3);
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
 }
 
 /* Print Styles */

@@ -391,25 +391,76 @@ namespace MeraKharcha.Data
 
         private static async Task EnsureSchemaColumnsAsync(ApplicationDbContext context)
         {
-            var alterCommands = new[]
+            try
             {
-                "ALTER TABLE Groups ADD COLUMN BudgetAmount TEXT NULL DEFAULT '0';",
-                "ALTER TABLE Groups ADD COLUMN BudgetPeriod TEXT NULL DEFAULT 'Total';",
-                "ALTER TABLE Expenses ADD COLUMN Currency TEXT NULL DEFAULT 'INR';",
-                "ALTER TABLE Expenses ADD COLUMN OriginalAmount TEXT NULL DEFAULT '0';",
-                "ALTER TABLE Expenses ADD COLUMN ExchangeRate TEXT NULL DEFAULT '1.0';"
-            };
+                var connection = context.Database.GetDbConnection();
+                if (connection.State != System.Data.ConnectionState.Open)
+                {
+                    await connection.OpenAsync();
+                }
 
-            foreach (var cmd in alterCommands)
+                // 1. Check columns in Groups
+                var groupCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info('Groups');";
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        groupCols.Add(reader.GetString(1));
+                    }
+                }
+
+                if (!groupCols.Contains("BudgetAmount"))
+                {
+                    using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "ALTER TABLE Groups ADD COLUMN BudgetAmount TEXT NULL DEFAULT '0';";
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                if (!groupCols.Contains("BudgetPeriod"))
+                {
+                    using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "ALTER TABLE Groups ADD COLUMN BudgetPeriod TEXT NULL DEFAULT 'Total';";
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // 2. Check columns in Expenses
+                var expenseCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info('Expenses');";
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        expenseCols.Add(reader.GetString(1));
+                    }
+                }
+
+                if (!expenseCols.Contains("Currency"))
+                {
+                    using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "ALTER TABLE Expenses ADD COLUMN Currency TEXT NULL DEFAULT 'INR';";
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                if (!expenseCols.Contains("OriginalAmount"))
+                {
+                    using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "ALTER TABLE Expenses ADD COLUMN OriginalAmount TEXT NULL DEFAULT '0';";
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                if (!expenseCols.Contains("ExchangeRate"))
+                {
+                    using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "ALTER TABLE Expenses ADD COLUMN ExchangeRate TEXT NULL DEFAULT '1.0';";
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch
             {
-                try
-                {
-                    await context.Database.ExecuteSqlRawAsync(cmd);
-                }
-                catch
-                {
-                    // Ignore if column already exists
-                }
+                // Ignore fallback
             }
 
             // Set default budgets for demo groups if not already set
