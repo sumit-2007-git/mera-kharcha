@@ -24,24 +24,51 @@
 
                 <!-- Basic Expense Information -->
                 <div class="row g-3 mb-4">
-                    <div class="col-md-7">
+                    <div class="col-md-6">
                         <label asp-for="Title" class="form-label small fw-semibold">Expense Title *</label>
-                        <input asp-for="Title" class="form-control form-control-lg" placeholder="e.g. Seafood Dinner, Beach Villa, Groceries..." required />
+                        <input asp-for="Title" id="Title" class="form-control form-control-lg" placeholder="e.g. Seafood Dinner, Beach Villa, Groceries..." required />
                         <span asp-validation-for="Title" class="text-danger small"></span>
                     </div>
 
-                    <div class="col-md-5">
+                    <div class="col-md-3">
+                        <label asp-for="Currency" class="form-label small fw-semibold">Currency</label>
+                        <select asp-for="Currency" id="currencySelect" class="form-select form-select-lg fw-semibold">
+                            <option value="INR" data-symbol="₹" data-rate="1.0">🇮🇳 INR (₹)</option>
+                            <option value="USD" data-symbol="$" data-rate="84.65">🇺🇸 USD ($)</option>
+                            <option value="EUR" data-symbol="€" data-rate="91.40">🇪🇺 EUR (€)</option>
+                            <option value="AED" data-symbol="د.إ" data-rate="23.05">🇦🇪 AED (د.إ)</option>
+                            <option value="THB" data-symbol="฿" data-rate="2.48">🇹🇭 THB (฿)</option>
+                            <option value="GBP" data-symbol="£" data-rate="108.25">🇬🇧 GBP (£)</option>
+                            <option value="SGD" data-symbol="S$" data-rate="63.70">🇸🇬 SGD (S$)</option>
+                            <option value="JPY" data-symbol="¥" data-rate="0.57">🇯🇵 JPY (¥)</option>
+                        </select>
+                        <input type="hidden" asp-for="ExchangeRate" id="exchangeRateInput" value="1.0" />
+                        <input type="hidden" asp-for="OriginalAmount" id="originalAmountInput" value="0" />
+                    </div>
+
+                    <div class="col-md-3">
                         <label asp-for="BaseAmount" class="form-label small fw-semibold">Base Amount (₹) *</label>
                         <div class="input-group input-group-lg">
-                            <span class="input-group-text bg-body-tertiary fw-bold">₹</span>
-                            <input asp-for="BaseAmount" class="form-control fw-bold" placeholder="0.00" step="0.01" required />
+                            <span class="input-group-text bg-body-tertiary fw-bold" id="currencySymbolBadge">₹</span>
+                            <input asp-for="BaseAmount" id="BaseAmount" class="form-control fw-bold" placeholder="0.00" step="0.01" required />
                         </div>
                         <span asp-validation-for="BaseAmount" class="text-danger small"></span>
                     </div>
 
+                    <!-- Foreign Currency Conversion Banner (Shows if non-INR) -->
+                    <div class="col-12 d-none" id="forexBanner">
+                        <div class="p-2 px-3 rounded-3 bg-info-subtle border border-info-subtle d-flex justify-content-between align-items-center small">
+                            <span>
+                                <i class="bi bi-arrow-left-right me-1 text-info"></i>
+                                Live Forex: <strong id="forexRateText">1 USD = ₹84.65 INR</strong>
+                            </span>
+                            <span class="text-muted">Original: <strong id="forexOriginalText">$0.00</strong></span>
+                        </div>
+                    </div>
+
                     <div class="col-md-4">
                         <label asp-for="PaidByUserId" class="form-label small fw-semibold">Paid By *</label>
-                        <select asp-for="PaidByUserId" class="form-select">
+                        <select asp-for="PaidByUserId" id="PaidByUserId" class="form-select">
                             @foreach (var m in Model.AvailableMembers)
                             {
                                 <option value="@m.UserId">@m.FullName</option>
@@ -51,7 +78,7 @@
 
                     <div class="col-md-4">
                         <label asp-for="CategoryId" class="form-label small fw-semibold">Category</label>
-                        <select asp-for="CategoryId" class="form-select">
+                        <select asp-for="CategoryId" id="CategoryId" class="form-select">
                             <option value="">-- Choose Category --</option>
                             @foreach (var c in Model.AvailableCategories)
                             {
@@ -62,7 +89,7 @@
 
                     <div class="col-md-4">
                         <label asp-for="ExpenseDate" class="form-label small fw-semibold">Expense Date</label>
-                        <input asp-for="ExpenseDate" type="date" class="form-control" />
+                        <input asp-for="ExpenseDate" id="ExpenseDate" type="date" class="form-control" />
                     </div>
                 </div>
 
@@ -79,19 +106,19 @@
                                 <div class="row g-3">
                                     <div class="col-6 col-md-3">
                                         <label asp-for="TaxAmount" class="form-label small fw-semibold">Tax (₹)</label>
-                                        <input asp-for="TaxAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
+                                        <input asp-for="TaxAmount" id="TaxAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
                                     </div>
                                     <div class="col-6 col-md-3">
                                         <label asp-for="TipAmount" class="form-label small fw-semibold">Tip (₹)</label>
-                                        <input asp-for="TipAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
+                                        <input asp-for="TipAmount" id="TipAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
                                     </div>
                                     <div class="col-6 col-md-3">
                                         <label asp-for="ServiceCharge" class="form-label small fw-semibold">Service (₹)</label>
-                                        <input asp-for="ServiceCharge" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
+                                        <input asp-for="ServiceCharge" id="ServiceCharge" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
                                     </div>
                                     <div class="col-6 col-md-3">
                                         <label asp-for="DiscountAmount" class="form-label small fw-semibold text-danger">Discount - (₹)</label>
-                                        <input asp-for="DiscountAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
+                                        <input asp-for="DiscountAmount" id="DiscountAmount" class="form-control form-control-sm" placeholder="0.00" step="0.01" />
                                     </div>
                                 </div>
                             </div>
@@ -99,18 +126,70 @@
                     </div>
                 </div>
 
-                <!-- Receipt Upload & Assisted OCR Simulation -->
-                <div class="p-3 bg-body-tertiary rounded-3 border border-light mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label asp-for="ReceiptFile" class="form-label small fw-semibold mb-0">
-                            <i class="bi bi-paperclip me-1"></i> Attach Receipt Bill (Image / PDF)
-                        </label>
-                        <button type="button" id="scanReceiptBtn" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                            <i class="bi bi-magic me-1"></i> Simulate Receipt OCR
-                        </button>
+                <!-- Feature 1: Real AI Bill Scanner & Itemized Bill Splitting -->
+                <div class="card-modern p-3 mb-4 border border-primary border-opacity-25" style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.03) 0%, rgba(124, 58, 237, 0.04) 100%);">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
+                        <div>
+                            <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1 mb-1">
+                                <i class="bi bi-stars me-1"></i>AI Feature
+                            </span>
+                            <h6 class="fw-bold mb-0">Smart Bill Scanner & Itemized Split</h6>
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <button type="button" id="scanUploadedBtn" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
+                                <i class="bi bi-magic me-1"></i> Scan Uploaded File
+                            </button>
+                        </div>
                     </div>
-                    <input asp-for="ReceiptFile" type="file" class="form-control form-control-sm" accept="image/*,application/pdf" />
-                    <small class="text-muted" style="font-size: 0.75rem;">Supported: JPG, PNG, WEBP, PDF (Max 5MB). Click "Simulate Receipt OCR" to test auto-filling extracted bill info!</small>
+
+                    <p class="text-muted small mb-3">
+                        Upload your restaurant, grocery or activity bill. AI will automatically extract items, taxes & discounts, allowing you to choose who ate/shared what!
+                    </p>
+
+                    <div class="row g-2 align-items-center mb-3">
+                        <div class="col-md-7">
+                            <input asp-for="ReceiptFile" id="ReceiptFile" type="file" class="form-control form-control-sm" accept="image/*,application/pdf" />
+                        </div>
+                        <div class="col-md-5">
+                            <div class="d-flex gap-1 flex-wrap">
+                                <span class="small text-muted me-1 align-self-center">Try Sample Bill:</span>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2 preset-btn" data-preset="restaurant" style="font-size: 0.75rem;">🍽️ Beach Shack</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2 preset-btn" data-preset="cafe" style="font-size: 0.75rem;">☕ CCD Cafe</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2 preset-btn" data-preset="groceries" style="font-size: 0.75rem;">🛒 DMart</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0 px-2 preset-btn" data-preset="watersports" style="font-size: 0.75rem;">🤿 Scuba Pass</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Scanned Items Breakdown Container -->
+                    <div id="aiItemsContainer" class="d-none mt-3 p-3 bg-body rounded-3 border">
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <div>
+                                <span class="badge bg-success-subtle text-success fw-bold me-2"><i class="bi bi-check2-circle me-1"></i>Items Extracted</span>
+                                <strong id="aiVendorName" class="text-body">Vendor Name</strong>
+                            </div>
+                            <button type="button" id="applyItemizedSplitBtn" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm fw-semibold">
+                                <i class="bi bi-check-all me-1"></i> Apply to Split Table Below
+                            </button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-2" style="font-size: 0.85rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th style="width: 70px;">Qty</th>
+                                        <th style="width: 110px;">Price (₹)</th>
+                                        <th>Who Consumed / Shared this Item?</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="aiItemsTableBody">
+                                    <!-- Dynamic rows from AI scanner -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <small class="text-muted d-block" id="aiScanSummaryText"></small>
+                    </div>
                 </div>
 
                 <!-- Split Method Selector -->
@@ -206,5 +285,8 @@
 </div>
 
 @section Scripts {
+    <script>
+        window.groupMembers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableMembers));
+    </script>
     <script src="~/js/expense-calc.js" asp-append-version="true"></script>
 }

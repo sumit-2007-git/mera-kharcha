@@ -18,6 +18,9 @@ namespace MeraKharcha.Data
             // Ensure Database is created
             await context.Database.EnsureCreatedAsync();
 
+            // Ensure new schema columns exist in SQLite database
+            await EnsureSchemaColumnsAsync(context);
+
             // 1. Seed Roles
             string[] roles = { "SystemAdmin", "GroupAdmin", "User" };
             foreach (var role in roles)
@@ -383,6 +386,42 @@ namespace MeraKharcha.Data
                 );
 
                 await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task EnsureSchemaColumnsAsync(ApplicationDbContext context)
+        {
+            var alterCommands = new[]
+            {
+                "ALTER TABLE Groups ADD COLUMN BudgetAmount TEXT NULL DEFAULT '0';",
+                "ALTER TABLE Groups ADD COLUMN BudgetPeriod TEXT NULL DEFAULT 'Total';",
+                "ALTER TABLE Expenses ADD COLUMN Currency TEXT NULL DEFAULT 'INR';",
+                "ALTER TABLE Expenses ADD COLUMN OriginalAmount TEXT NULL DEFAULT '0';",
+                "ALTER TABLE Expenses ADD COLUMN ExchangeRate TEXT NULL DEFAULT '1.0';"
+            };
+
+            foreach (var cmd in alterCommands)
+            {
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync(cmd);
+                }
+                catch
+                {
+                    // Ignore if column already exists
+                }
+            }
+
+            // Set default budgets for demo groups if not already set
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync("UPDATE Groups SET BudgetAmount = '40000', BudgetPeriod = 'Trip' WHERE Name LIKE '%Goa%' AND (BudgetAmount IS NULL OR BudgetAmount = '0');");
+                await context.Database.ExecuteSqlRawAsync("UPDATE Groups SET BudgetAmount = '15000', BudgetPeriod = 'Monthly' WHERE Name LIKE '%Apartment%' AND (BudgetAmount IS NULL OR BudgetAmount = '0');");
+                await context.Database.ExecuteSqlRawAsync("UPDATE Expenses SET Currency = 'INR', ExchangeRate = '1.0' WHERE Currency IS NULL;");
+            }
+            catch
+            {
+                // Ignore if error
             }
         }
     }

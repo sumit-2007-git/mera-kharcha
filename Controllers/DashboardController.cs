@@ -136,18 +136,27 @@ namespace MeraKharcha.Controllers
             }
 
             // Category breakdown chart data
-            var categoryStats = await _context.Expenses
+            var userExpenses = await _context.Expenses
                 .Where(e => userGroupIds.Contains(e.GroupId))
-                .GroupBy(e => new { e.Category!.Name, e.Category.ColorHex })
+                .Select(e => new
+                {
+                    CategoryName = e.Category != null ? e.Category.Name : "Uncategorized",
+                    ColorHex = e.Category != null ? e.Category.ColorHex : "#6B7280",
+                    e.Amount
+                })
+                .ToListAsync();
+
+            var categoryStats = userExpenses
+                .GroupBy(e => new { e.CategoryName, e.ColorHex })
                 .Select(g => new
                 {
-                    Category = g.Key.Name ?? "Uncategorized",
-                    Color = g.Key.ColorHex ?? "#6B7280",
+                    Category = g.Key.CategoryName,
+                    Color = g.Key.ColorHex,
                     Total = g.Sum(e => e.Amount)
                 })
                 .OrderByDescending(x => x.Total)
                 .Take(6)
-                .ToListAsync();
+                .ToList();
 
             var catLabels = categoryStats.Select(c => c.Category).ToList();
             var catData = categoryStats.Select(c => c.Total).ToList();

@@ -219,8 +219,76 @@
                 </div>
             </div>
 
-            <!-- Overview Right Sidebar: Quick Optimization & Invite Link -->
+            <!-- Overview Right Sidebar: Budget, Quick Logger, Settlement Status & Invite -->
             <div class="col-lg-4">
+                <!-- Feature 5: Smart Budget Progress Meter Card -->
+                @{
+                    var totalSpend = Model.Expenses.Sum(e => e.Amount);
+                    var grpBudget = Model.Group.BudgetAmount ?? 0m;
+                    var pct = grpBudget > 0 ? Math.Round((totalSpend / grpBudget) * 100, 1) : 0;
+                    var rem = grpBudget > 0 ? (grpBudget - totalSpend) : 0;
+                    var isOverBudget = grpBudget > 0 && totalSpend > grpBudget;
+                    var barCls = isOverBudget ? "bg-danger" : (pct >= 80 ? "bg-warning" : "bg-success");
+                }
+                <div class="card-modern p-4 mb-4 border @(isOverBudget ? "border-danger" : (pct >= 80 ? "border-warning" : "border-light")) shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-speedometer2 text-primary fs-5"></i>
+                            <h6 class="fw-bold mb-0">Group Budget</h6>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2" data-bs-toggle="modal" data-bs-target="#editBudgetModal">
+                            <i class="bi bi-pencil-square me-1"></i> Set / Edit
+                        </button>
+                    </div>
+
+                    @if (grpBudget > 0)
+                    {
+                        <div class="d-flex justify-content-between align-items-baseline mb-1">
+                            <span class="fs-5 fw-bold text-body">₹@totalSpend.ToString("N0")</span>
+                            <span class="small text-muted">Budget: <strong>₹@grpBudget.ToString("N0")</strong></span>
+                        </div>
+                        <div class="progress mb-2" style="height: 10px; border-radius: 6px;">
+                            <div class="progress-bar @barCls progress-bar-striped progress-bar-animated" role="progressbar" style="width: @Math.Min(100, pct)%;"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>@pct% used</span>
+                            @if (isOverBudget)
+                            {
+                                <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Over by ₹@Math.Abs(rem).ToString("N0")</span>
+                            }
+                            else
+                            {
+                                <span class="text-success fw-semibold">₹@rem.ToString("N0") remaining</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="small text-muted mb-2">Track spending limits against a target budget.</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100 rounded-3" data-bs-toggle="modal" data-bs-target="#editBudgetModal">
+                            <i class="bi bi-plus-circle me-1"></i> Set Target Budget
+                        </button>
+                    }
+                </div>
+
+                <!-- Feature 3: WhatsApp & Quick Chat Expense Logger Card -->
+                <div class="card-modern p-4 mb-4 border border-success border-opacity-25 shadow-sm" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.04) 0%, rgba(16, 185, 129, 0.06) 100%);">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-whatsapp text-success fs-5"></i>
+                        <h6 class="fw-bold mb-0">Quick Chat Expense Logger</h6>
+                    </div>
+                    <p class="small text-muted mb-2">
+                        Type natural sentences to log an expense instantly:
+                    </p>
+                    <div class="input-group mb-2">
+                        <input type="text" id="quickChatInput" class="form-control form-control-sm" placeholder="e.g. Rahul paid 1200 for dinner" />
+                        <button type="button" id="quickChatSubmitBtn" class="btn btn-success btn-sm px-3">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                    <div id="quickChatFeedback" class="small mt-1 d-none"></div>
+                </div>
+
                 <!-- Optimization Quick Box -->
                 <div class="card-modern p-4 mb-4 border-warning border-opacity-50">
                     <div class="d-flex align-items-center gap-2 mb-2">
@@ -576,21 +644,31 @@
                                 </div>
                             </div>
 
-                            <div class="d-flex align-items-center gap-3 justify-content-between">
-                                <span class="fs-5 fw-bold text-primary">₹@t.Amount.ToString("N2")</span>
+                            <div class="d-flex align-items-center gap-2 justify-content-between flex-wrap">
+                                <span class="fs-5 fw-bold text-primary me-2">₹@t.Amount.ToString("N2")</span>
+
+                                <button type="button" class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm"
+                                        onclick="openUpiPaymentModal('@Model.Group.Id', '@t.ReceiverUserId', @t.Amount, '@t.ReceiverName', '@(receiverUser?.UpiId ?? "")')">
+                                    <i class="bi bi-qr-code me-1"></i> UPI QR & Pay
+                                </button>
+
+                                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                        onclick="openWhatsAppReminderModal('@Model.Group.Id', '@t.PayerUserId', '@t.ReceiverUserId', @t.Amount, '@t.PayerName', '@t.ReceiverName')">
+                                    <i class="bi bi-whatsapp text-success me-1"></i> WhatsApp Reminder
+                                </button>
 
                                 @if (t.PayerUserId == Model.CurrentUserId)
                                 {
-                                    <button type="button" class="btn btn-success btn-sm rounded-pill px-4 shadow-sm"
+                                    <button type="button" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm"
                                             onclick="openPayModal('@t.ReceiverUserId', '@t.ReceiverName', '@(receiverUser?.UpiId ?? "")', '@t.Amount')">
-                                        <i class="bi bi-cash me-1"></i> Pay Now
+                                        <i class="bi bi-cash me-1"></i> Record
                                     </button>
                                 }
                                 else
                                 {
-                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
                                             onclick="openPayModal('@t.ReceiverUserId', '@t.ReceiverName', '@(receiverUser?.UpiId ?? "")', '@t.Amount')">
-                                        Record Payment
+                                        Record
                                     </button>
                                 }
                             </div>
@@ -753,6 +831,126 @@
     </div>
 </div>
 
+<!-- Feature 5: Edit Group Budget Modal -->
+<div class="modal fade" id="editBudgetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <form asp-controller="Groups" asp-action="UpdateBudget" method="post">
+                <input type="hidden" name="groupId" value="@Model.Group.Id" />
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-speedometer2 me-2 text-primary"></i>Set Group Spending Budget</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <p class="small text-muted mb-3">Define a spending limit for this group. Real-time alerts will warn members when 80% or 100% of the budget is consumed.</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Target Budget Amount (₹) *</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-body-tertiary fw-bold">₹</span>
+                            <input type="number" step="100" name="budgetAmount" class="form-control fw-bold" value="@(Model.Group.BudgetAmount ?? 40000m)" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Budget Scope / Period</label>
+                        <select name="budgetPeriod" class="form-select">
+                            <option value="Total">Total Group Budget (e.g. Vacation Trip)</option>
+                            <option value="Monthly">Monthly Budget (e.g. Flatmates)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Save Budget
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Feature 2: Dynamic UPI QR Code & 1-Click Pay Deep-link Modal -->
+<div class="modal fade" id="upiQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-qr-code me-2 text-success"></i>Pay via UPI & Instant Apps</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-3">
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Sending settlement payment to:</span>
+                    <h5 class="fw-bold mb-0 text-success" id="upiModalReceiverName">Receiver Name</h5>
+                    <div class="d-inline-flex align-items-center gap-2 mt-1 px-3 py-1 bg-body-tertiary rounded-pill border">
+                        <i class="bi bi-person-badge text-muted"></i>
+                        <span class="small font-monospace" id="upiModalReceiverUpi">user@upi</span>
+                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="copyUpiIdBtn" title="Copy UPI ID">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-white d-inline-block rounded-4 shadow-sm border mb-3">
+                    <img id="upiQrCodeImg" src="" alt="UPI QR Code" class="img-fluid" style="width: 200px; height: 200px;" />
+                </div>
+                <div>
+                    <h3 class="fw-extrabold text-primary mb-1" id="upiModalAmount">₹0.00</h3>
+                    <small class="text-muted d-block mb-3">Scan with Google Pay, PhonePe, Paytm, BHIM, Cred or any bank app</small>
+                </div>
+
+                <!-- 1-Click Mobile App Buttons -->
+                <div class="d-flex flex-wrap gap-2 justify-content-center mb-3">
+                    <a id="gpayDeepLink" href="#" class="btn btn-outline-dark btn-sm rounded-pill px-3 shadow-sm">
+                        <i class="bi bi-google me-1 text-primary"></i> GPay App
+                    </a>
+                    <a id="phonepeDeepLink" href="#" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
+                        <i class="bi bi-phone me-1"></i> PhonePe
+                    </a>
+                    <a id="paytmDeepLink" href="#" class="btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm">
+                        <i class="bi bi-wallet2 me-1"></i> Paytm
+                    </a>
+                    <a id="genericUpiDeepLink" href="#" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm">
+                        <i class="bi bi-arrow-up-right-circle me-1"></i> Any UPI App
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary btn-sm rounded-pill px-3" id="upiRecordConfirmBtn">
+                    <i class="bi bi-check2-circle me-1"></i> Record as Paid
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feature 3: WhatsApp Debt Reminder Modal -->
+<div class="modal fade" id="whatsAppReminderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-whatsapp text-success me-2"></i>Send Polite WhatsApp Reminder</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="small text-muted mb-2">A polite, automated WhatsApp message has been generated. You can preview, copy or open WhatsApp directly:</p>
+                <div class="p-3 bg-body-tertiary rounded-3 border mb-3">
+                    <pre id="whatsAppReminderPreview" class="mb-0 text-wrap font-monospace" style="font-size: 0.85rem; white-space: pre-wrap;"></pre>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" id="copyWaTextBtn">
+                    <i class="bi bi-clipboard me-1"></i> Copy Text
+                </button>
+                <a id="openWaWebLink" href="#" target="_blank" class="btn btn-success px-4 shadow-sm">
+                    <i class="bi bi-whatsapp me-1"></i> Open in WhatsApp
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Record / Pay Settlement Modal -->
 <div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -834,7 +1032,131 @@
             modal.show();
         }
 
+        // Feature 2: Open Dynamic UPI QR & Pay Modal
+        function openUpiPaymentModal(groupId, receiverId, amount, receiverName, receiverUpi) {
+            fetch(`/Settlements/GetUpiPaymentDetails?groupId=${groupId}&receiverId=${receiverId}&amount=${amount}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('upiModalReceiverName').innerText = data.receiverName;
+                        document.getElementById('upiModalReceiverUpi').innerText = data.upiId;
+                        document.getElementById('upiModalAmount').innerText = '₹' + parseFloat(data.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(data.upiUri)}`;
+                        document.getElementById('upiQrCodeImg').src = qrUrl;
+
+                        document.getElementById('gpayDeepLink').href = data.gpayIntent;
+                        document.getElementById('phonepeDeepLink').href = data.phonePeUri;
+                        document.getElementById('paytmDeepLink').href = data.paytmUri;
+                        document.getElementById('genericUpiDeepLink').href = data.upiUri;
+
+                        document.getElementById('copyUpiIdBtn').onclick = () => {
+                            navigator.clipboard.writeText(data.upiId).then(() => {
+                                if (typeof showToast === 'function') showToast(`Copied UPI ID: ${data.upiId}`, 'success');
+                            });
+                        };
+
+                        document.getElementById('upiRecordConfirmBtn').onclick = () => {
+                            const upiModal = bootstrap.Modal.getInstance(document.getElementById('upiQrModal'));
+                            if (upiModal) upiModal.hide();
+                            openPayModal(receiverId, data.receiverName, data.upiId, amount);
+                        };
+
+                        const modal = new bootstrap.Modal(document.getElementById('upiQrModal'));
+                        modal.show();
+                    } else {
+                        alert(data.message || 'Could not load payment details.');
+                    }
+                });
+        }
+
+        // Feature 3: Open WhatsApp Debt Reminder Modal
+        function openWhatsAppReminderModal(groupId, debtorId, creditorId, amount, debtorName, creditorName) {
+            fetch(`/Settlements/GetWhatsAppReminder?groupId=${groupId}&debtorId=${debtorId}&creditorId=${creditorId}&amount=${amount}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('whatsAppReminderPreview').innerText = data.reminderText;
+                        document.getElementById('openWaWebLink').href = data.waWebUrl;
+
+                        document.getElementById('copyWaTextBtn').onclick = () => {
+                            navigator.clipboard.writeText(data.reminderText).then(() => {
+                                if (typeof showToast === 'function') showToast('Copied WhatsApp reminder text!', 'success');
+                            });
+                        };
+
+                        const modal = new bootstrap.Modal(document.getElementById('whatsAppReminderModal'));
+                        modal.show();
+                    } else {
+                        alert(data.message || 'Could not generate reminder.');
+                    }
+                });
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
+            // Feature 3: Quick Chat Expense Logger
+            const quickChatInput = document.getElementById('quickChatInput');
+            const quickChatSubmitBtn = document.getElementById('quickChatSubmitBtn');
+            const quickChatFeedback = document.getElementById('quickChatFeedback');
+
+            if (quickChatSubmitBtn && quickChatInput) {
+                quickChatSubmitBtn.addEventListener('click', function () {
+                    const msg = quickChatInput.value.trim();
+                    if (!msg) {
+                        alert('Please type an expense phrase first (e.g. Rahul paid 1200 for lunch).');
+                        return;
+                    }
+
+                    quickChatSubmitBtn.disabled = true;
+                    quickChatSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                    const formData = new FormData();
+                    formData.append('groupId', '@Model.Group.Id');
+                    formData.append('message', msg);
+
+                    fetch('/Expenses/QuickCreateExpenseFromChat', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        quickChatSubmitBtn.disabled = false;
+                        quickChatSubmitBtn.innerHTML = '<i class="bi bi-send-fill"></i>';
+
+                        if (data.success) {
+                            quickChatInput.value = '';
+                            quickChatFeedback.className = 'small mt-1 text-success fw-bold';
+                            quickChatFeedback.innerText = `✅ Logged: ${data.details.payerName} paid ₹${data.details.amount} for "${data.details.title}"!`;
+                            quickChatFeedback.classList.remove('d-none');
+
+                            if (typeof showToast === 'function') {
+                                showToast(`✨ Expense "${data.details.title}" (₹${data.details.amount}) logged successfully!`, 'success');
+                            }
+
+                            setTimeout(() => {
+                                window.location.href = `/Groups/Details/@Model.Group.Id?tab=expenses`;
+                            }, 1200);
+                        } else {
+                            quickChatFeedback.className = 'small mt-1 text-danger';
+                            quickChatFeedback.innerText = data.message || 'Could not parse expense.';
+                            quickChatFeedback.classList.remove('d-none');
+                        }
+                    })
+                    .catch(err => {
+                        quickChatSubmitBtn.disabled = false;
+                        quickChatSubmitBtn.innerHTML = '<i class="bi bi-send-fill"></i>';
+                        alert('Error: ' + err);
+                    });
+                });
+
+                quickChatInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        quickChatSubmitBtn.click();
+                    }
+                });
+            }
+
             // Group Category Chart
             const catLabels = @Html.Raw(Model.CategoryLabelsJson);
             const catData = @Html.Raw(Model.CategoryDataJson);
@@ -869,7 +1191,7 @@
                         datasets: [{
                             label: 'Total Paid (₹)',
                             data: memData,
-                            backgroundColor: '#4f46e5',
+                            backgroundColor: '#FF6B00',
                             borderRadius: 8
                         }]
                     },

@@ -14,8 +14,9 @@ using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Database Connection Configuration (SQLite default for zero-setup portability, runs on any machine!)
+var defaultDbPath = Path.Combine(builder.Environment.ContentRootPath, "merakharcha.db");
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Data Source=merakharcha.db";
+    ?? $"Data Source={defaultDbPath}";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
@@ -56,6 +57,9 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IReceiptScannerService, ReceiptScannerService>();
+builder.Services.AddScoped<ICurrencyService, CurrencyService>();
+builder.Services.AddScoped<IWhatsAppExpenseParserService, WhatsAppExpenseParserService>();
 
 // 4. Real-time SignalR Hubs
 builder.Services.AddSignalR();

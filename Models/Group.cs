@@ -15,6 +15,10 @@ namespace MeraKharcha.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsArchived { get; set; } = false;
 
+        // Budgeting
+        public decimal? BudgetAmount { get; set; } = 0;
+        public string BudgetPeriod { get; set; } = "Total"; // Total, Monthly
+
         public virtual ICollection<GroupMember> Members { get; set; } = new List<GroupMember>();
         public virtual ICollection<Expense> Expenses { get; set; } = new List<Expense>();
         public virtual ICollection<Settlement> Settlements { get; set; } = new List<Settlement>();

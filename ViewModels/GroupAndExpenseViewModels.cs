@@ -88,6 +88,16 @@ namespace MeraKharcha.ViewModels
         [Display(Name = "Discount (₹)")]
         public decimal DiscountAmount { get; set; } = 0;
 
+        // Multi-currency support
+        [Display(Name = "Currency")]
+        public string Currency { get; set; } = "INR";
+
+        [Display(Name = "Exchange Rate to INR")]
+        public decimal ExchangeRate { get; set; } = 1.0m;
+
+        [Display(Name = "Original Foreign Amount")]
+        public decimal OriginalAmount { get; set; } = 0;
+
         [Required(ErrorMessage = "Paid by is required")]
         [Display(Name = "Paid By")]
         public string PaidByUserId { get; set; } = string.Empty;

@@ -35,6 +35,11 @@ namespace MeraKharcha.Services
         public string? ReceiptUrl { get; set; }
         public List<ParticipantShareInputDto> Participants { get; set; } = new();
 
+        // Multi-currency support
+        public string Currency { get; set; } = "INR";
+        public decimal OriginalAmount { get; set; } = 0;
+        public decimal ExchangeRate { get; set; } = 1.0m;
+
         public decimal CalculateFinalTotal()
         {
             return Math.Max(0, BaseAmount + TaxAmount + TipAmount + ServiceCharge - DiscountAmount);
@@ -215,6 +220,9 @@ namespace MeraKharcha.Services
                 Notes = dto.Notes,
                 Tags = dto.Tags,
                 ReceiptUrl = dto.ReceiptUrl,
+                Currency = string.IsNullOrWhiteSpace(dto.Currency) ? "INR" : dto.Currency,
+                OriginalAmount = dto.OriginalAmount > 0 ? dto.OriginalAmount : finalTotal,
+                ExchangeRate = dto.ExchangeRate > 0 ? dto.ExchangeRate : 1.0m,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -275,6 +283,46 @@ namespace MeraKharcha.Services
                     "info",
                     $"/Groups/Details/{group.Id}?tab=expenses"
                 );
+            }
+
+            // Smart Budget Alert Check
+            if (group.BudgetAmount.HasValue && group.BudgetAmount.Value > 0)
+            {
+                var totalSpent = (await _context.Expenses
+                    .Where(e => e.GroupId == group.Id)
+                    .Select(e => e.Amount)
+                    .ToListAsync()).Sum();
+
+                if (totalSpent > group.BudgetAmount.Value)
+                {
+                    await _notificationService.NotifyGroupAsync(group.Id, "BudgetAlert", new
+                    {
+                        groupId = group.Id,
+                        message = $"⚠️ Over Budget! {group.Name} has spent ₹{totalSpent:N2}, exceeding its budget of ₹{group.BudgetAmount.Value:N2}.",
+                        isOverBudget = true
+                    });
+
+                    foreach (var m in group.Members)
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            m.UserId,
+                            "Budget Exceeded Alert ⚠️",
+                            $"{group.Name} has crossed its allocated budget of ₹{group.BudgetAmount.Value:N0} (Total Spent: ₹{totalSpent:N0}).",
+                            "alert",
+                            $"/Groups/Details/{group.Id}"
+                        );
+                    }
+                }
+                else if (totalSpent >= (group.BudgetAmount.Value * 0.8m))
+                {
+                    var pct = Math.Round((totalSpent / group.BudgetAmount.Value) * 100, 1);
+                    await _notificationService.NotifyGroupAsync(group.Id, "BudgetAlert", new
+                    {
+                        groupId = group.Id,
+                        message = $"⚠️ Budget Warning: {group.Name} has used {pct}% of its budget.",
+                        isOverBudget = false
+                    });
+                }
             }
 
             return (true, "Expense created successfully.", expense);

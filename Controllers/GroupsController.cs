@@ -363,6 +363,41 @@ namespace MeraKharcha.Controllers
             return RedirectToAction(nameof(Details), new { id = groupId, tab = "members" });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateBudget(int groupId, decimal budgetAmount, string budgetPeriod = "Total")
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge();
+
+            var group = await _context.Groups
+                .Include(g => g.Members)
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            if (group == null) return NotFound();
+
+            var membership = group.Members.FirstOrDefault(m => m.UserId == user.Id);
+            if (membership == null && !User.IsInRole("SystemAdmin"))
+            {
+                TempData["ErrorMessage"] = "You do not have permission to modify this group.";
+                return RedirectToAction(nameof(Details), new { id = groupId });
+            }
+
+            group.BudgetAmount = Math.Max(0, budgetAmount);
+            group.BudgetPeriod = string.IsNullOrWhiteSpace(budgetPeriod) ? "Total" : budgetPeriod;
+            await _context.SaveChangesAsync();
+
+            await _activityLogger.LogAsync(
+                groupId,
+                user.Id,
+                "BudgetUpdated",
+                $"{user.FullName ?? user.UserName} updated the group budget to ₹{group.BudgetAmount:N2} ({group.BudgetPeriod})."
+            );
+
+            TempData["SuccessMessage"] = $"Group budget updated to ₹{group.BudgetAmount:N2} successfully.";
+            return RedirectToAction(nameof(Details), new { id = groupId, tab = "overview" });
+        }
+
         private static string GenerateInviteCode()
         {
             const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

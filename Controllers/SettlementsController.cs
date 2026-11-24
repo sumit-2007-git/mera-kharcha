@@ -20,19 +20,22 @@ namespace MeraKharcha.Controllers
         private readonly IBalanceService _balanceService;
         private readonly INotificationService _notificationService;
         private readonly IActivityLogger _activityLogger;
+        private readonly IWhatsAppExpenseParserService _whatsAppParser;
 
         public SettlementsController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             IBalanceService balanceService,
             INotificationService notificationService,
-            IActivityLogger activityLogger)
+            IActivityLogger activityLogger,
+            IWhatsAppExpenseParserService whatsAppParser)
         {
             _context = context;
             _userManager = userManager;
             _balanceService = balanceService;
             _notificationService = notificationService;
             _activityLogger = activityLogger;
+            _whatsAppParser = whatsAppParser;
         }
 
         public async Task<IActionResult> Optimize(int groupId)
@@ -207,6 +210,83 @@ namespace MeraKharcha.Controllers
             ViewBag.Group = group;
             ViewBag.CurrentUserId = user.Id;
             return View(settlements);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetUpiPaymentDetails(int groupId, string receiverId, decimal amount)
+        {
+            var receiver = await _context.Users.FindAsync(receiverId);
+            var group = await _context.Groups.FindAsync(groupId);
+
+            if (receiver == null || group == null)
+            {
+                return Json(new { success = false, message = "Receiver or Group not found." });
+            }
+
+            var upiId = !string.IsNullOrWhiteSpace(receiver.UpiId) ? receiver.UpiId : "receiver@upi";
+            var receiverName = receiver.FullName ?? receiver.UserName ?? "Friend";
+            var note = Uri.EscapeDataString($"MeraKharcha {group.Name}");
+            var encName = Uri.EscapeDataString(receiverName);
+
+            // NPCI Standard UPI URI
+            var upiUri = $"upi://pay?pa={upiId}&pn={encName}&am={amount:F2}&cu=INR&tn={note}";
+
+            // App-specific intent schemes
+            var gpayIntent = $"intent://pay?pa={upiId}&pn={encName}&am={amount:F2}&cu=INR&tn={note}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end";
+            var phonePeUri = $"phonepe://pay?pa={upiId}&pn={encName}&am={amount:F2}&cu=INR&tn={note}";
+            var paytmUri = $"paytmmp://pay?pa={upiId}&pn={encName}&am={amount:F2}&cu=INR&tn={note}";
+
+            return Json(new
+            {
+                success = true,
+                receiverId = receiver.Id,
+                receiverName,
+                upiId,
+                amount,
+                groupName = group.Name,
+                upiUri,
+                gpayIntent,
+                phonePeUri,
+                paytmUri
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetWhatsAppReminder(int groupId, string debtorId, string creditorId, decimal amount)
+        {
+            var debtor = await _context.Users.FindAsync(debtorId);
+            var creditor = await _context.Users.FindAsync(creditorId);
+            var group = await _context.Groups.FindAsync(groupId);
+
+            if (debtor == null || creditor == null || group == null)
+            {
+                return Json(new { success = false, message = "User or Group not found." });
+            }
+
+            var debtorName = debtor.FullName ?? debtor.UserName ?? "Friend";
+            var creditorName = creditor.FullName ?? creditor.UserName ?? "Friend";
+            var appUrl = $"{Request.Scheme}://{Request.Host}/Groups/Details/{groupId}?tab=settlements";
+
+            var reminderText = _whatsAppParser.GenerateDebtReminderText(
+                debtorName,
+                creditorName,
+                amount,
+                creditor.UpiId,
+                group.Name,
+                appUrl
+            );
+
+            var waWebUrl = $"https://api.whatsapp.com/send?text={Uri.EscapeDataString(reminderText)}";
+
+            return Json(new
+            {
+                success = true,
+                debtorName,
+                creditorName,
+                amount,
+                reminderText,
+                waWebUrl
+            });
         }
     }
 }

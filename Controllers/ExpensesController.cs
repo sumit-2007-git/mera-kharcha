@@ -22,17 +22,26 @@ namespace MeraKharcha.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IExpenseService _expenseService;
         private readonly IFileStorageService _fileStorage;
+        private readonly IReceiptScannerService _receiptScanner;
+        private readonly ICurrencyService _currencyService;
+        private readonly IWhatsAppExpenseParserService _whatsAppParser;
 
         public ExpensesController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             IExpenseService expenseService,
-            IFileStorageService fileStorage)
+            IFileStorageService fileStorage,
+            IReceiptScannerService receiptScanner,
+            ICurrencyService currencyService,
+            IWhatsAppExpenseParserService whatsAppParser)
         {
             _context = context;
             _userManager = userManager;
             _expenseService = expenseService;
             _fileStorage = fileStorage;
+            _receiptScanner = receiptScanner;
+            _currencyService = currencyService;
+            _whatsAppParser = whatsAppParser;
         }
 
         [HttpGet]
@@ -142,6 +151,9 @@ namespace MeraKharcha.Controllers
                 Notes = model.Notes?.Trim(),
                 Tags = model.Tags?.Trim(),
                 ReceiptUrl = receiptUrl,
+                Currency = string.IsNullOrWhiteSpace(model.Currency) ? "INR" : model.Currency,
+                OriginalAmount = model.OriginalAmount > 0 ? model.OriginalAmount : model.BaseAmount,
+                ExchangeRate = model.ExchangeRate > 0 ? model.ExchangeRate : 1.0m,
                 Participants = model.Participants
             };
 
@@ -213,29 +225,113 @@ namespace MeraKharcha.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ScanReceiptMock(IFormFile file)
+        public async Task<IActionResult> ScanReceipt(IFormFile? file, string? presetId = null)
         {
-            if (file == null || file.Length == 0)
+            var result = await _receiptScanner.ScanReceiptAsync(file, presetId);
+            return Json(result);
+        }
+
+        [HttpGet]
+        public IActionResult GetReceiptPresets()
+        {
+            var presets = _receiptScanner.GetSamplePresets();
+            return Json(presets);
+        }
+
+        [HttpGet]
+        public IActionResult GetCurrencies()
+        {
+            var currencies = _currencyService.GetSupportedCurrencies();
+            return Json(currencies);
+        }
+
+        [HttpGet]
+        public IActionResult ConvertCurrency(decimal amount, string currency)
+        {
+            var inrAmount = _currencyService.ConvertToInr(amount, currency);
+            var rate = _currencyService.GetRateToInr(currency);
+            return Json(new { success = true, inrAmount, rate, currency });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ParseWhatsAppExpense(int groupId, string message)
+        {
+            var group = await _context.Groups
+                .Include(g => g.Members).ThenInclude(m => m.User)
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            if (group == null)
             {
-                return Json(new { success = false, message = "No receipt image provided." });
+                return Json(new { success = false, message = "Group not found." });
             }
 
-            // Simulated AI/OCR extraction logic
-            await Task.Delay(400); // realistic scan delay
-            var random = new Random();
-            var merchants = new[] { "Cafe Coffee Day", "Haldiram's", "Nature's Basket", "Pizza Hut", "Shell Fuel Station", "Apollo Pharmacy", "Zomato Dine" };
-            var selectedMerchant = merchants[random.Next(merchants.Length)];
-            var baseAmt = random.Next(400, 2800);
-            var taxAmt = Math.Round((decimal)baseAmt * 0.05m, 2);
+            var memberNames = group.Members
+                .Select(m => m.User.FullName ?? m.User.UserName ?? "User")
+                .ToList();
 
+            var parsed = _whatsAppParser.ParseExpenseMessage(message, memberNames);
+            return Json(parsed);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> QuickCreateExpenseFromChat(int groupId, string message)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            var group = await _context.Groups
+                .Include(g => g.Members).ThenInclude(m => m.User)
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            if (group == null) return NotFound(new { success = false, message = "Group not found." });
+
+            var memberNames = group.Members
+                .Select(m => m.User.FullName ?? m.User.UserName ?? "User")
+                .ToList();
+
+            var parsed = _whatsAppParser.ParseExpenseMessage(message, memberNames);
+            if (!parsed.Success || parsed.Amount <= 0)
+            {
+                return Json(new { success = false, message = parsed.Explanation });
+            }
+
+            // Find matching payer
+            var payerMember = group.Members.FirstOrDefault(m => 
+                (m.User.FullName != null && m.User.FullName.IndexOf(parsed.PayerName, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                (m.User.UserName != null && m.User.UserName.IndexOf(parsed.PayerName, StringComparison.OrdinalIgnoreCase) >= 0)) 
+                ?? group.Members.FirstOrDefault(m => m.UserId == user.Id) 
+                ?? group.Members.First();
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Name.ToLower().Contains(parsed.CategoryName.ToLower()));
+
+            var dto = new CreateExpenseDto
+            {
+                GroupId = groupId,
+                Title = parsed.Title,
+                BaseAmount = parsed.Amount,
+                PaidByUserId = payerMember.UserId,
+                ExpenseDate = DateTime.Today,
+                CategoryId = category?.Id,
+                SplitType = SplitType.Equal,
+                Notes = $"Logged via WhatsApp Bot / Chat Parser: '{parsed.RawMessage}'",
+                Currency = "INR",
+                ExchangeRate = 1.0m,
+                Participants = group.Members.Select(m => new ParticipantShareInputDto
+                {
+                    UserId = m.UserId,
+                    IsIncluded = true,
+                    SharesCount = 1
+                }).ToList()
+            };
+
+            var createResult = await _expenseService.CreateExpenseAsync(dto, user.Id);
             return Json(new
             {
-                success = true,
-                merchant = selectedMerchant,
-                baseAmount = baseAmt,
-                taxAmount = taxAmt,
-                date = DateTime.Today.ToString("yyyy-MM-dd"),
-                notes = $"Extracted via Receipt OCR from '{Path.GetFileName(file.FileName)}'"
+                success = createResult.Success,
+                message = createResult.Message,
+                expenseId = createResult.Expense?.Id,
+                details = parsed
             });
         }
     }

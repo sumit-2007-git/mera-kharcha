@@ -168,54 +168,248 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initial Run
     updateSplitInputsVisibility();
 
-    // ----------------- Mock Receipt Scanner / OCR -----------------
-    const scanReceiptBtn = document.getElementById('scanReceiptBtn');
-    const receiptFileInput = document.getElementById('ReceiptFile');
+    // ----------------- Multi-Currency & Forex Converter -----------------
+    const currencySelect = document.getElementById('currencySelect');
+    const currencySymbolBadge = document.getElementById('currencySymbolBadge');
+    const exchangeRateInput = document.getElementById('exchangeRateInput');
+    const originalAmountInput = document.getElementById('originalAmountInput');
+    const forexBanner = document.getElementById('forexBanner');
+    const forexRateText = document.getElementById('forexRateText');
+    const forexOriginalText = document.getElementById('forexOriginalText');
 
-    if (scanReceiptBtn && receiptFileInput) {
-        scanReceiptBtn.addEventListener('click', function () {
-            if (!receiptFileInput.files || receiptFileInput.files.length === 0) {
-                alert('Please choose an image file first to simulate receipt scanning.');
-                receiptFileInput.click();
-                return;
+    function updateCurrencyForex() {
+        if (!currencySelect) return;
+        const selectedOpt = currencySelect.options[currencySelect.selectedIndex];
+        const code = currencySelect.value;
+        const symbol = selectedOpt?.getAttribute('data-symbol') || '₹';
+        const rate = parseFloat(selectedOpt?.getAttribute('data-rate')) || 1.0;
+
+        if (exchangeRateInput) exchangeRateInput.value = rate;
+
+        if (code === 'INR') {
+            if (currencySymbolBadge) currencySymbolBadge.innerText = '₹';
+            if (forexBanner) forexBanner.classList.add('d-none');
+            if (originalAmountInput) originalAmountInput.value = baseAmountInput?.value || 0;
+        } else {
+            if (currencySymbolBadge) currencySymbolBadge.innerText = symbol;
+            if (forexBanner) {
+                forexBanner.classList.remove('d-none');
+                if (forexRateText) forexRateText.innerText = `1 ${code} = ₹${rate.toFixed(2)} INR`;
+            }
+            // Recalculate original vs INR
+            const currentBase = parseFloat(baseAmountInput?.value) || 0;
+            if (originalAmountInput) {
+                const foreignAmt = rate > 0 ? (currentBase / rate).toFixed(2) : currentBase;
+                originalAmountInput.value = foreignAmt;
+                if (forexOriginalText) forexOriginalText.innerText = `${symbol}${foreignAmt} ${code}`;
+            }
+        }
+    }
+
+    if (currencySelect) {
+        currencySelect.addEventListener('change', updateCurrencyForex);
+    }
+
+    // ----------------- AI Bill Scanner & Itemized Bill Splitting -----------------
+    const scanUploadedBtn = document.getElementById('scanUploadedBtn');
+    const receiptFileInput = document.getElementById('ReceiptFile');
+    const presetButtons = document.querySelectorAll('.preset-btn');
+    const aiItemsContainer = document.getElementById('aiItemsContainer');
+    const aiItemsTableBody = document.getElementById('aiItemsTableBody');
+    const aiVendorName = document.getElementById('aiVendorName');
+    const aiScanSummaryText = document.getElementById('aiScanSummaryText');
+    const applyItemizedSplitBtn = document.getElementById('applyItemizedSplitBtn');
+
+    let currentScannedBill = null;
+
+    function handleReceiptScan(presetId = null) {
+        const formData = new FormData();
+        if (presetId) {
+            formData.append('presetId', presetId);
+        } else if (receiptFileInput && receiptFileInput.files && receiptFileInput.files.length > 0) {
+            formData.append('file', receiptFileInput.files[0]);
+        } else {
+            alert('Please choose an image/receipt file first, or click one of the quick preset buttons!');
+            if (receiptFileInput) receiptFileInput.click();
+            return;
+        }
+
+        if (scanUploadedBtn) {
+            scanUploadedBtn.disabled = true;
+            scanUploadedBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> AI Extracting Items...';
+        }
+
+        fetch('/Expenses/ScanReceipt', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (scanUploadedBtn) {
+                scanUploadedBtn.disabled = false;
+                scanUploadedBtn.innerHTML = '<i class="bi bi-magic me-1"></i> Scan Uploaded File';
             }
 
-            const formData = new FormData();
-            formData.append('file', receiptFileInput.files[0]);
+            if (data.success) {
+                currentScannedBill = data;
+                renderScannedItems(data);
 
-            scanReceiptBtn.disabled = true;
-            scanReceiptBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Extracting details...';
+                // Auto-fill form values
+                const titleInp = document.getElementById('Title');
+                if (titleInp && !titleInp.value) titleInp.value = data.vendorName;
 
-            fetch('/Expenses/ScanReceiptMock', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                scanReceiptBtn.disabled = false;
-                scanReceiptBtn.innerHTML = '<i class="bi bi-magic me-1"></i> Scan & Auto-Fill';
+                if (baseAmountInput) baseAmountInput.value = data.subTotal;
+                if (taxInput) taxInput.value = data.taxAmount;
+                if (tipInput) tipInput.value = data.tipAmount;
+                if (serviceInput) serviceInput.value = data.serviceCharge;
+                if (discountInput) discountInput.value = data.discountAmount;
 
-                if (data.success) {
-                    const titleInp = document.getElementById('Title');
-                    if (titleInp && !titleInp.value) titleInp.value = data.merchant;
-                    if (baseAmountInput) baseAmountInput.value = data.baseAmount;
-                    if (taxInput) taxInput.value = data.taxAmount;
-                    const dateInp = document.getElementById('ExpenseDate');
-                    if (dateInp) dateInp.value = data.date;
+                const dateInp = document.getElementById('ExpenseDate');
+                if (dateInp && data.billDate) {
+                    dateInp.value = data.billDate.split('T')[0];
+                }
 
-                    const notesInp = document.getElementById('Notes');
-                    if (notesInp) notesInp.value = (notesInp.value ? notesInp.value + '\n' : '') + data.notes;
-
-                    recalculateShares();
-                    if (typeof showToast === 'function') {
-                        showToast(`✨ Extracted bill for "${data.merchant}" (₹${data.baseAmount})!`, 'success');
+                // Match Category
+                const catSelect = document.getElementById('CategoryId');
+                if (catSelect && data.categoryName) {
+                    for (let opt of catSelect.options) {
+                        if (opt.text.toLowerCase().includes(data.categoryName.toLowerCase())) {
+                            catSelect.value = opt.value;
+                            break;
+                        }
                     }
                 }
-            })
-            .catch(() => {
-                scanReceiptBtn.disabled = false;
-                scanReceiptBtn.innerHTML = '<i class="bi bi-magic me-1"></i> Scan & Auto-Fill';
+
+                calculateFinalTotal();
+                recalculateShares();
+
+                if (typeof showToast === 'function') {
+                    showToast(`✨ AI Extracted ${data.items ? data.items.length : 0} items from "${data.vendorName}"!`, 'success');
+                }
+            }
+        })
+        .catch(err => {
+            if (scanUploadedBtn) {
+                scanUploadedBtn.disabled = false;
+                scanUploadedBtn.innerHTML = '<i class="bi bi-magic me-1"></i> Scan Uploaded File';
+            }
+            alert('Scan error: ' + err);
+        });
+    }
+
+    function renderScannedItems(bill) {
+        if (!aiItemsContainer || !aiItemsTableBody) return;
+        aiItemsContainer.classList.remove('d-none');
+        if (aiVendorName) aiVendorName.innerText = bill.vendorName + ` (₹${bill.totalAmount.toFixed(2)})`;
+        if (aiScanSummaryText) aiScanSummaryText.innerText = bill.rawSummary || 'Items extracted. Check the participants who consumed each item:';
+
+        aiItemsTableBody.innerHTML = '';
+        const members = window.groupMembers || [];
+
+        bill.items.forEach((item, idx) => {
+            const tr = document.createElement('tr');
+
+            let memberCheckboxesHtml = '<div class="d-flex flex-wrap gap-2">';
+            members.forEach(m => {
+                const memberId = m.userId || m.UserId;
+                const memberName = m.fullName || m.FullName || 'Member';
+                memberCheckboxesHtml += `
+                    <label class="form-check-label badge bg-body-tertiary text-body border px-2 py-1 user-select-none" style="cursor: pointer;">
+                        <input type="checkbox" class="form-check-input me-1 item-member-cb" data-item-idx="${idx}" data-user-id="${memberId}" checked />
+                        ${memberName.split(' ')[0]}
+                    </label>
+                `;
             });
+            memberCheckboxesHtml += '</div>';
+
+            tr.innerHTML = `
+                <td class="fw-semibold">${item.name}</td>
+                <td><span class="badge bg-secondary-subtle text-secondary">${item.quantity}x</span></td>
+                <td class="fw-bold text-primary">₹${item.price.toFixed(2)}</td>
+                <td>${memberCheckboxesHtml}</td>
+            `;
+            aiItemsTableBody.appendChild(tr);
+        });
+    }
+
+    if (scanUploadedBtn) {
+        scanUploadedBtn.addEventListener('click', () => handleReceiptScan(null));
+    }
+
+    presetButtons.forEach(btn => {
+        btn.addEventListener('click', function () {
+            const presetId = this.getAttribute('data-preset');
+            handleReceiptScan(presetId);
+        });
+    });
+
+    if (applyItemizedSplitBtn) {
+        applyItemizedSplitBtn.addEventListener('click', function () {
+            if (!currentScannedBill || !currentScannedBill.items) return;
+
+            const members = window.groupMembers || [];
+            const userShares = {};
+            members.forEach(m => {
+                const uId = m.userId || m.UserId;
+                userShares[uId] = 0;
+            });
+
+            // Calculate consumption per item
+            currentScannedBill.items.forEach((item, idx) => {
+                const checkedCbs = aiItemsTableBody.querySelectorAll(`.item-member-cb[data-item-idx="${idx}"]:checked`);
+                const consumersCount = checkedCbs.length;
+                if (consumersCount > 0) {
+                    const itemTotal = item.price * (item.quantity || 1);
+                    const splitPerPerson = itemTotal / consumersCount;
+                    checkedCbs.forEach(cb => {
+                        const uId = cb.getAttribute('data-user-id');
+                        if (userShares[uId] !== undefined) {
+                            userShares[uId] += splitPerPerson;
+                        }
+                    });
+                }
+            });
+
+            // Add proportional share of extra taxes, tips, discounts
+            const subTotal = currentScannedBill.subTotal || 1;
+            const extraAdjustments = (currentScannedBill.taxAmount || 0) + 
+                                     (currentScannedBill.tipAmount || 0) + 
+                                     (currentScannedBill.serviceCharge || 0) - 
+                                     (currentScannedBill.discountAmount || 0);
+
+            // Switch Split Type to "Exact Amounts"
+            if (splitTypeSelect) {
+                splitTypeSelect.value = "2"; // ExactAmount
+                updateSplitInputsVisibility();
+            }
+
+            // Populate exact amount inputs
+            splitRows.forEach(row => {
+                const cb = row.querySelector('.participant-checkbox');
+                const exactInp = row.querySelector('.exact-amount-input');
+                const userIdInp = row.querySelector('input[type="hidden"][name$=".UserId"]');
+
+                if (userIdInp) {
+                    const uId = userIdInp.value;
+                    const itemSubtotal = userShares[uId] || 0;
+                    if (itemSubtotal > 0) {
+                        const ratio = subTotal > 0 ? (itemSubtotal / subTotal) : 0;
+                        const netShare = Math.max(0, itemSubtotal + (extraAdjustments * ratio));
+
+                        if (cb) cb.checked = true;
+                        if (exactInp) exactInp.value = netShare.toFixed(2);
+                    } else {
+                        if (cb) cb.checked = false;
+                        if (exactInp) exactInp.value = "0.00";
+                    }
+                }
+            });
+
+            recalculateShares();
+
+            if (typeof showToast === 'function') {
+                showToast('✅ Itemized bill successfully divided and applied to exact split table!', 'success');
+            }
         });
     }
 });

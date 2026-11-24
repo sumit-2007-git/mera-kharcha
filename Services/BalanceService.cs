@@ -27,6 +27,14 @@ namespace MeraKharcha.Services
         public List<UserDebtMatrixDto> RawPairwiseDebts { get; set; } = new();
         public SettlementOptimizationResultDto OptimizationResult { get; set; } = new();
         public decimal TotalPendingSettlements { get; set; }
+
+        // Budget properties
+        public decimal BudgetAmount { get; set; }
+        public string BudgetPeriod { get; set; } = "Total";
+        public decimal BudgetPercentageUsed => BudgetAmount > 0 ? Math.Round((TotalGroupSpending / BudgetAmount) * 100, 1) : 0;
+        public decimal BudgetRemaining => BudgetAmount > 0 ? Math.Max(0, BudgetAmount - TotalGroupSpending) : 0;
+        public bool IsOverBudget => BudgetAmount > 0 && TotalGroupSpending > BudgetAmount;
+        public bool IsNearBudgetLimit => BudgetAmount > 0 && TotalGroupSpending >= (BudgetAmount * 0.8m) && !IsOverBudget;
     }
 
     public interface IBalanceService
@@ -164,7 +172,9 @@ namespace MeraKharcha.Services
                 MemberBalances = balances,
                 RawPairwiseDebts = pairwiseDebts,
                 OptimizationResult = optimizationResult,
-                TotalPendingSettlements = pendingSettlements
+                TotalPendingSettlements = pendingSettlements,
+                BudgetAmount = group?.BudgetAmount ?? 0m,
+                BudgetPeriod = group?.BudgetPeriod ?? "Total"
             };
         }
 

@@ -19,6 +19,11 @@ namespace MeraKharcha.Models
         public decimal ServiceCharge { get; set; } = 0;
         public decimal DiscountAmount { get; set; } = 0;
 
+        // Multi-currency support
+        public string Currency { get; set; } = "INR";
+        public decimal OriginalAmount { get; set; } = 0;
+        public decimal ExchangeRate { get; set; } = 1.0m;
+
         public string PaidByUserId { get; set; } = string.Empty;
         public virtual ApplicationUser PaidByUser { get; set; } = null!;
 
