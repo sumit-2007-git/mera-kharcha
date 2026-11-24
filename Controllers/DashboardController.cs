@@ -19,22 +19,29 @@ namespace MeraKharcha.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IBalanceService _balanceService;
 
         public DashboardController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
             IBalanceService balanceService)
         {
             _context = context;
             _userManager = userManager;
+            _signInManager = signInManager;
             _balanceService = balanceService;
         }
 
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge();
+            if (user == null)
+            {
+                await _signInManager.SignOutAsync();
+                return RedirectToAction("Login", "Account");
+            }
 
             var currentUserId = user.Id;
 

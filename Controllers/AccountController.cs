@@ -22,11 +22,18 @@ namespace MeraKharcha.Controllers
         }
 
         [HttpGet]
-        public IActionResult Login(string? returnUrl = null)
+        public async Task<IActionResult> Login(string? returnUrl = null)
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("Index", "Dashboard");
+                var user = await _userManager.GetUserAsync(User);
+                if (user != null)
+                {
+                    return RedirectToAction("Index", "Dashboard");
+                }
+
+                // Stale or deleted session cookie: sign out automatically
+                await _signInManager.SignOutAsync();
             }
 
             ViewData["ReturnUrl"] = returnUrl;
@@ -76,11 +83,16 @@ namespace MeraKharcha.Controllers
         }
 
         [HttpGet]
-        public IActionResult Register()
+        public async Task<IActionResult> Register()
         {
             if (User.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("Index", "Dashboard");
+                var user = await _userManager.GetUserAsync(User);
+                if (user != null)
+                {
+                    return RedirectToAction("Index", "Dashboard");
+                }
+                await _signInManager.SignOutAsync();
             }
 
             return View(new RegisterViewModel());
@@ -129,9 +141,8 @@ namespace MeraKharcha.Controllers
             return View(model);
         }
 
+        [HttpGet]
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize]
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
